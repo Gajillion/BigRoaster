@@ -20,22 +20,23 @@
 # IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-from multiprocessing import Process, Pipe, Queue, current_process
-from Queue import Full
-from subprocess import Popen, PIPE, call
-from datetime import datetime
 import time, random, serial, os
 import sys
-from smbus import SMBus
-import RPi.GPIO as GPIO
-from pid import pidpy as PIDController
-import xml.etree.ElementTree as ET
 from flask import Flask, render_template, request, jsonify
+import xml.etree.ElementTree as ET
+import Roaster
+#from multiprocessing import Process, Pipe, Queue, current_process
+#from Queue import Full
+#from subprocess import Popen, PIPE, call
+#from datetime import datetime
+#from smbus import SMBus
+#import RPi.GPIO as GPIO
+#from pid import pidpy as PIDController
 
 import Temp1Wire
 import Display
 
-global parent_conn, parent_connB, parent_connC, statusQ, statusQ_B, statusQ_C
+global parent_conn, statusQ
 global xml_root, template_name, pinHeatList, pinGPIOList
 global brewtime, oneWireDir
 
@@ -106,31 +107,7 @@ def postparams(sensorNum=None):
             
     #send to main temp control process 
     #if did not receive variable key value in POST, the param class default is used
-    if sensorNum == "1":
-        print("got post to temp sensor 1")
-        parent_conn.send(param.status)
-    elif sensorNum == "2":
-        print("got post to temp sensor 2")
-        if len(pinHeatList) >= 2:
-            parent_connB.send(param.status)
-        else:
-            param.status["mode"] = "No Temp Control"
-            param.status["set_point"] = 0.0
-            param.status["duty_cycle"] = 0.0 
-            parent_connB.send(param.status)
-            print("no heat GPIO pin assigned")
-    elif sensorNum == "3":
-        print("got post to temp sensor 3")
-        if len(pinHeatList) >= 3:
-            parent_connC.send(param.status)
-        else:
-            param.status["mode"] = "No Temp Control"
-            param.status["set_point"] = 0.0
-            param.status["duty_cycle"] = 0.0 
-            parent_connC.send(param.status)
-            print("no heat GPIO pin assigned")
-    else:
-        print("Sensor doesn't exist (POST)")
+    parent_conn.send(param.status)
         
     return 'OK'
 
@@ -163,15 +140,7 @@ def getstatusB():
 @app.route('/getstatus/<sensorNum>') #only GET
 def getstatus(sensorNum=None):          
     #blocking receive - current status
-    if sensorNum == "1":
-        param.status = statusQ.get()
-    elif sensorNum == "2":
-        param.status = statusQ_B.get()
-    elif sensorNum == "3":
-        param.status = statusQ_C.get()
-    else:
-        print("Sensor doesn't exist (GET)")
-        param.status["temp"] = "-999"
+    param.status = statusQ.get()
         
     return jsonify(**param.status)
 
@@ -223,5 +192,48 @@ def logdata(tank, temp, heat):
 
 
 if __name__ == '__main__':
+    # Retrieve root element from config.xml for parsing
+    tree = ET.parse('config.xml')
+    xml_root = tree.getroot()
+    template_name = xml_root.find('Template').text.strip()
+
+    root_dir_elem = xml_root.find('RootDir')
+    if root_dir_elem is not None:
+        os.chdir(root_dir_elem.text.strip())
+    else:
+        print("No RootDir tag found in config.xml, running from current directory")
+
+    # Look for roasters
+    for roasters in xml_root.iter('Roasters'):
+        print ("found roasters")
+        for roaster in roasters:
+            roasterId = roaster.find('Roaster_Id').text
+            myRoaster = Roaster.Roaster(roasterId)
+
+            tempSensors = roaster.find('Temp_Sensors')
+            # A roaster can have more than one temperature probe
+            for tempSensor in tempSensors.iter('Temp_Sensor'):
+                # These need to be appended to a list so we can have more than one, but for now
+                # just leave this
+                tempSensorId = tempSensor.find('Temp_Sensor_Id').text
+                tempSensorSPI = tempSensor.find('SPI').text
+                tempSensorDriver = tempSensor.find('Temp_Sensor_Driver').text
+
+                if tempSensorSPI == "hardware":
+                    myRoaster.addTempSensor(tempSensorId,tempSensorDriver,tempSensorSPI)
+                elif tempSensorSPI == "gpio":
+                    myRoaster.addTempSensor(tempSensorId,tempSensorDriver,tempSensorSPI,\
+                                                    int(tempSensor.find('clk').text), \
+                                                    int(tempSensor.find('cs').text), \
+                                                    int(tempSensor.find('do').text))
+            # grab our gas servo
+            servo = roaster.find('Servo')
+            step = int(servo.find('Step_Pin').text)
+            direction = int(servo.find('Dir_Pin').text)
+            ms1 = int(servo.find('MS1_Pin').text)
+            ms2 = int(servo.find('MS2_Pin').text)
+
+
     app.debug = True 
     app.run(use_reloader=False, host='0.0.0.0')
+
