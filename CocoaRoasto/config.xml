@@ -15,7 +15,8 @@
             <Roaster_Id>default</Roaster_Id>
             <Temp_Sensors>
                 <Temp_Sensor>
-                    <Temp_Sensor_Id>indrum</Temp_Sensor_Id>
+                    <Temp_Sensor_Name>indrum</Temp_Sensor_Name>
+                    <Temp_Sensor_Id>0</Temp_Sensor_Id>
                     <Temp_Sensor_Driver>MAX31855</Temp_Sensor_Driver>
                     <SPI>hardware</SPI>
                 </Temp_Sensor>
@@ -23,10 +24,13 @@
             <Servo>
                 <Servo_Id>default</Servo_Id>
                 <Servo_Driver>easydriver</Servo_Driver>
+                <Servo_Delay>0.005</Servo_Delay>
                 <Step_Pin>14</Step_Pin>
                 <Dir_Pin>15</Dir_Pin>
                 <MS1_Pin>23</MS1_Pin>
                 <MS2_Pin>24</MS2_Pin>
+                <Home_Low_Pin>5</Home_Low_Pin>
+                <Home_High_Pin>6</Home_High_Pin>
             </Servo>
             <Valve>
                 <!-- This is a ceiling value for the maximum turns of the valve. Round up to the nearest whole number. -->

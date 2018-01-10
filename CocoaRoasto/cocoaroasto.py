@@ -25,7 +25,7 @@ import sys
 from flask import Flask, render_template, request, jsonify
 import xml.etree.ElementTree as ET
 import Roaster
-#from multiprocessing import Process, Pipe, Queue, current_process
+from multiprocessing import Queue, Pipe, Process, current_process
 #from Queue import Full
 #from subprocess import Popen, PIPE, call
 #from datetime import datetime
@@ -36,9 +36,11 @@ import Roaster
 import Temp1Wire
 import Display
 
-global parent_conn, statusQ
-global xml_root, template_name, pinHeatList, pinGPIOList
-global brewtime, oneWireDir
+#global xml_root, template_name, pinHeatList, pinGPIOList
+#global brewtime, oneWireDir
+
+parent_conn = None
+roasterStatusQ = []
 
 app = Flask(__name__, template_folder='templates')
 #url_for('static', filename='raspibrew.css')
@@ -129,19 +131,18 @@ def GPIO_Toggle(GPIO_Num=None, onoff=None):
         
     return jsonify(**out)
     
-#get status from RasPiBrew using firefox web browser (first temp sensor / backwards compatibility)
-@app.route('/getstatus') #only GET
-def getstatusB():          
-    #blocking receive - current status    
-    param.status = statusQ.get()        
-    return jsonify(**param.status)
-
 #get status from RasPiBrew using firefox web browser (selectable temp sensor)
-@app.route('/getstatus/<sensorNum>') #only GET
-def getstatus(sensorNum=None):          
+@app.route('/getstatus/<roasterNum>') #only GET
+def getstatus(roasterNum=None):          
+    global roasterStatusQ
     #blocking receive - current status
-    param.status = statusQ.get()
-        
+    roasterN = int(roasterNum)
+    if roasterN > len(roasterStatusQ):
+        print("Sensor doesn't exist (GET)")
+        param.status["temp"] = "-999"
+    else:
+        param.status = roasterStatusQ[roasterN-1].get()
+
     return jsonify(**param.status)
 
 def getbrewtime():
@@ -179,8 +180,13 @@ def packParamGet(numTempSensors, myTempSensorNum, temp, tempUnits, elapsed, mode
     print "packParamGet"
         
 # Main Temperature Control Process
-def tempControlProc(myTempSensor, display, pinNum, readOnly, paramStatus, statusQ, conn):
+def tempControlProc(myRoaster, paramStatus, conn):
     print "tempControlProc"
+    mode, cycle_time, duty_cycle, boil_duty_cycle, set_point, boil_manage_temp, num_pnts_smooth, \
+    k_param, i_param, d_param = unPackParamInitAndPost(paramStatus)
+
+    p = current_process()
+    print('Starting:', p.name, p.pid)
 
 def logdata(tank, temp, heat):
     f = open("brewery" + str(tank) + ".csv", "ab")
@@ -215,25 +221,46 @@ if __name__ == '__main__':
             for tempSensor in tempSensors.iter('Temp_Sensor'):
                 # These need to be appended to a list so we can have more than one, but for now
                 # just leave this
-                tempSensorId = tempSensor.find('Temp_Sensor_Id').text
-                tempSensorSPI = tempSensor.find('SPI').text
-                tempSensorDriver = tempSensor.find('Temp_Sensor_Driver').text
+                tempSensorId        = tempSensor.find('Temp_Sensor_Id').text
+                tempSensorName      = tempSensor.find('Temp_Sensor_Name').text
+                tempSensorSPI       = tempSensor.find('SPI').text
+                tempSensorDriver    = tempSensor.find('Temp_Sensor_Driver').text
 
                 if tempSensorSPI == "hardware":
-                    myRoaster.addTempSensor(tempSensorId,tempSensorDriver,tempSensorSPI)
+                    myRoaster.addTempSensor(tempSensorId,tempSensorName,tempSensorDriver,tempSensorSPI)
                 elif tempSensorSPI == "gpio":
-                    myRoaster.addTempSensor(tempSensorId,tempSensorDriver,tempSensorSPI,\
+                    myRoaster.addTempSensor(tempSensorId,tempSensorName,tempSensorDriver,tempSensorSPI,\
                                                     int(tempSensor.find('clk').text), \
                                                     int(tempSensor.find('cs').text), \
                                                     int(tempSensor.find('do').text))
+
             # grab our gas servo
-            servo = roaster.find('Servo')
-            step = int(servo.find('Step_Pin').text)
-            direction = int(servo.find('Dir_Pin').text)
-            ms1 = int(servo.find('MS1_Pin').text)
-            ms2 = int(servo.find('MS2_Pin').text)
+            servo       = roaster.find('Servo')
+            servoId     = servo.find('Servo_Id').text
+            driver      = servo.find('Servo_Driver').text
+            delay       = float(servo.find('Servo_Delay').text)
+            step        = int(servo.find('Step_Pin').text)
+            direction   = int(servo.find('Dir_Pin').text)
+            ms1         = int(servo.find('MS1_Pin').text)
+            ms2         = int(servo.find('MS2_Pin').text)
+            homeLow     = int(servo.find('Home_Low_Pin').text)
+            homeHigh    = int(servo.find('Home_High_Pin').text)
+
+            myRoaster.addGasServo(servoId,driver,delay,step,direction,ms1,ms2,homeLow,homeHigh)
+
+            statusQ = Queue(2) # blocking queue
+            myRoaster.addStatusQ(statusQ)
+
+            # Ugly, but we need to make access to the status queue global
+            roasterStatusQ.append(Queue(2)) #blocking queue        
+
+            parent_conn, child_conn = Pipe()
+            readOnly = False
+            pinNum = step # CHANGE THIS. We need to pass in all of the servo information to the tempControlProc which passes it to the heat control
+            p = Process(name = "tempControlProc", target=tempControlProc, args=(myRoaster, param.status, child_conn))
+            p.start()
+
 
 
     app.debug = True 
     app.run(use_reloader=False, host='0.0.0.0')
-
