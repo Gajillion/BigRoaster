@@ -2,6 +2,7 @@ class TempSensor:
     tempSensorId    = ''
     tempSensorName  = ''
     myTempSensor    = None
+    myPipe          = None
 
     def __init__(self, tempSensorId, tempSensorName, driver, spi, clk='', cs='', do=''):
         self.tempSensorId = tempSensorId
@@ -25,3 +26,18 @@ class TempSensor:
             print "ABORT!!!"
 
         print("Constructing %s sensor %s"%(driver,tempSensorId))
+
+    def addTempPipe(self, pipe):
+        self.myPipe = pipe
+
+    def getTempPipe(self):
+        return self.myPipe
+
+    def getTempSensorName(self):
+        return self.tempSensorName
+
+    def getTempSensorId(self):
+        return self.tempSensorId
+
+    def readTempC(self):
+        return self.myTempSensor.readTempC()

@@ -16,13 +16,19 @@ class Roaster:
         else:
             self.tempProbes.append(TempSensor.TempSensor(tempSensorId,driver,spi,clk,cs,do))
 
+    def getTempSensors(self):
+        return self.tempProbes
+
     def addGasServo(self,servoId,driver,delay,step,direction,ms1,ms2,\
                     home_low_pin='',home_high_pin='',sleep=0,enable=0,reset=0):
-        gasServo = GasServo.GasServo(servoId,driver,delay,step,direction,ms1,ms2,\
+        self.gasServo = GasServo.GasServo(servoId,driver,delay,step,direction,ms1,ms2,\
                     home_low_pin,home_high_pin,sleep,enable,reset)
+
+    def getGasServo(self):
+        return self.gasServo
 
     def addStatusQ(self,statusQ):
         statusQueue = statusQ
 
     def getStatusQ(self):
-        return statusQueue
+        return self.statusQueue
