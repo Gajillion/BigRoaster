@@ -4,7 +4,7 @@
 	<RootDir>/var/www/CocoaRoasto</RootDir>
 	<!-- Place templates (themes) in templates folder -->
 	<!-- The static folder must contain the corresponding css and js files -->
-	<Template>raspibrew_bootstrap.html</Template>
+	<Template>cocoaroasto.html</Template>
 	<!-- Use LCD - yes or no-->
 	<Use_LCD>no</Use_LCD>
 	<!-- GPIO pin numbering scheme - choose BOARD or BCM. If something else than these are given, BCM is chosen as default. -->
@@ -31,6 +31,8 @@
                 <MS2_Pin>24</MS2_Pin>
                 <Home_Low_Pin>5</Home_Low_Pin>
                 <Home_High_Pin>6</Home_High_Pin>
+                <Step>full_step</Step>
+                <Steps_Per_Rotation_Full>200</Steps_Per_Rotation_Full>
             </Servo>
             <Valve>
                 <!-- This is a ceiling value for the maximum turns of the valve. Round up to the nearest whole number. -->
