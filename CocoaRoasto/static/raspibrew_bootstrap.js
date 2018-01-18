@@ -210,10 +210,10 @@ function storeData(index, data) {
 	}
 
 	tempDataArray[index].push([timeElapsed[index], parseFloat(data.temp)]);
-	heatDataArray[index].push([timeElapsed[index], parseFloat(data.duty_cycle)]);
+	heatDataArray[index].push([timeElapsed[index], parseFloat(data.gasOutput)]);
 
 	//tempDataArray[0].push([i,parseFloat(data.temp)]);
-	//heatDataArray[0].push([i,parseFloat(data.duty_cycle)]);
+	//heatDataArray[0].push([i,parseFloat(data.gasOutput)]);
 
 	while (tempDataArray[index].length > jQuery('#windowSizeText').val()) {
 		tempDataArray[index].shift();
@@ -281,8 +281,8 @@ function waitForMsg() {
 			jQuery('#tempResponse').html(data.temp);
 			jQuery('#modeResponse').html(data.mode);
 			jQuery('#setpointResponse').html(data.set_point);
-			jQuery('#dutycycleResponse').html(data.duty_cycle.toFixed(2));
-			jQuery('#cycletimeResponse').html(data.cycle_time);
+			jQuery('#dutycycleResponse').html(data.gasOutput.toFixed(2));
+			jQuery('#cycletimeResponse').html(data.sampleTime);
 			jQuery('#k_paramResponse').html(data.k_param);
 			jQuery('#i_paramResponse').html(data.i_param);
 			jQuery('#d_paramResponse').html(data.d_param);
@@ -326,8 +326,8 @@ function waitForMsg() {
 				jQuery('#tempResponse2').html(data.temp);
 				jQuery('#modeResponse2').html(data.mode);
 				jQuery('#setpointResponse2').html(data.set_point);
-				jQuery('#dutycycleResponse2').html(data.duty_cycle.toFixed(2));
-				jQuery('#cycletimeResponse2').html(data.cycle_time);
+				jQuery('#dutycycleResponse2').html(data.gasOutput.toFixed(2));
+				jQuery('#cycletimeResponse2').html(data.sampleTime);
 				jQuery('#k_paramResponse2').html(data.k_param);
 				jQuery('#i_paramResponse2').html(data.i_param);
 				jQuery('#d_paramResponse2').html(data.d_param);
@@ -368,8 +368,8 @@ function waitForMsg() {
 				jQuery('#tempResponse3').html(data.temp);
 				jQuery('#modeResponse3').html(data.mode);
 				jQuery('#setpointResponse3').html(data.set_point);
-				jQuery('#dutycycleResponse3').html(data.duty_cycle.toFixed(2));
-				jQuery('#cycletimeResponse3').html(data.cycle_time);
+				jQuery('#dutycycleResponse3').html(data.gasOutput.toFixed(2));
+				jQuery('#cycletimeResponse3').html(data.sampleTime);
 				jQuery('#k_paramResponse3').html(data.k_param);
 				jQuery('#i_paramResponse3').html(data.i_param);
 				jQuery('#d_paramResponse3').html(data.d_param);

@@ -4,32 +4,34 @@
 	<RootDir>/var/www/CocoaRoasto</RootDir>
 	<!-- Place templates (themes) in templates folder -->
 	<!-- The static folder must contain the corresponding css and js files -->
-	<Template>raspibrew_bootstrap.html</Template>
+	<Template>cocoaroasto.html</Template>
 	<!-- Use LCD - yes or no-->
 	<Use_LCD>no</Use_LCD>
 	<!-- GPIO pin numbering scheme - choose BOARD or BCM. If something else than these are given, BCM is chosen as default. -->
 	<GPIO_pin_numbering_scheme>BCM</GPIO_pin_numbering_scheme>
-	<!-- Temperature Sensor Id -->
-	<!-- For Temp Control the Temp_Sensor_Id must have a corresponding GPIO Pin used -->
-	<!-- for heat, otherwise the temperature sensor is only for temp readout -->
-	<!-- Repeat same element names (Temp_Sensor_Id and optional Heat_Pin) for additional temp sensors -->
-	<!-- Currently limited to 3 temp sensors but that can easily be expanded in raspibrew.py -->
-	<Temp_Sensor_Id>28-0000037eb5c0</Temp_Sensor_Id>
     <Roasters>
         <!-- A Roaster consists of one or more temperature sensors and a single gas valve and servo -->
         <Roaster>
             <Roaster_Id>default</Roaster_Id>
             <Temp_Sensors>
                 <Temp_Sensor>
-                    <Temp_Sensor_Driver>MAX31855</Roast_Temp_Sensor_Driver>
+                    <Temp_Sensor_Name>indrum</Temp_Sensor_Name>
+                    <Temp_Sensor_Id>0</Temp_Sensor_Id>
+                    <Temp_Sensor_Driver>MAX31855</Temp_Sensor_Driver>
                     <SPI>hardware</SPI>
                 </Temp_Sensor>
             </Temp_Sensors>
             <Servo>
+                <Servo_Id>default</Servo_Id>
+                <Servo_Driver>easydriver</Servo_Driver>
+                <Servo_Delay>0.005</Servo_Delay>
                 <Step_Pin>14</Step_Pin>
                 <Dir_Pin>15</Dir_Pin>
                 <MS1_Pin>23</MS1_Pin>
                 <MS2_Pin>24</MS2_Pin>
+                <Home_Pin>5</Home_Pin>
+                <Step>full_step</Step>
+                <Steps_Per_Rotation_Full>200</Steps_Per_Rotation_Full>
             </Servo>
             <Valve>
                 <!-- This is a ceiling value for the maximum turns of the valve. Round up to the nearest whole number. -->
