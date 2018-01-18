@@ -272,10 +272,10 @@ def tempControlProc(myRoaster, paramStatus, conn):
                             tempMovingAverage += tempMovingAverageList[temp_idx]
                         tempMovingAverage /= num_pnts_smooth
 
-#                    print "len(tempMovingAverageList) = %d" % len(tempMovingAverageList)
-#                    print "Num Points smooth = %d" % num_pnts_smooth
-#                    print "tempMovingAverage = %.2f" % tempMovingAverage
-#                    print tempMovingAverageList
+            #        print "len(tempMovingAverageList) = %d" % len(tempMovingAverageList)
+            #        print "Num Points smooth = %d" % num_pnts_smooth
+            #        print "tempMovingAverage = %.2f" % tempMovingAverage
+            #        print tempMovingAverageList
 
                     # calculate PID every cycle
                     if (readyPIDcalc == True):
@@ -385,12 +385,16 @@ if __name__ == '__main__':
             direction   = int(servo.find('Dir_Pin').text)
             ms1         = int(servo.find('MS1_Pin').text)
             ms2         = int(servo.find('MS2_Pin').text)
-            homeLow     = int(servo.find('Home_Low_Pin').text)
-            homeHigh    = int(servo.find('Home_High_Pin').text)
+            home        = int(servo.find('Home_Pin').text)
             steps       = servo.find('Step').text
             stepsPer    = int(servo.find('Steps_Per_Rotation_Full').text)
 
-            myRoaster.addGasServo(servoId,driver,delay,step,direction,ms1,ms2,homeLow,homeHigh,steps,stepsPer)
+            # get our valve info
+            valve    = roaster.find('Valve')
+            maxTurns = int(valve.find('Max_Turns_Ceil').text)
+
+            myRoaster.addGasServo(servoId,driver,delay,step,direction,ms1,ms2,home,maxTurns,steps,stepsPer)
+            myGasServo = myRoaster.getGasServo()
             
             statusQ = Queue(2) # blocking queue
             myRoaster.addStatusQ(statusQ)
@@ -402,9 +406,7 @@ if __name__ == '__main__':
             p = Process(name = "tempControlProc", target=tempControlProc, args=(myRoaster, param.status, child_conn))
             p.start()
 
-            # get our valve info
-            valve    = roaster.find('Valve')
-            maxTurns = int(valve.find('Max_Turns_Ceil').text)
+            myGasServo.home()
 
     app.debug = True 
     app.run(use_reloader=False, host='0.0.0.0')

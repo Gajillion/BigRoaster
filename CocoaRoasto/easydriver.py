@@ -44,7 +44,6 @@ class easydriver(object):
 
 
     def step(self):
-        print "Stepping"
         gpio.output(self.pin_step,True)
         time.sleep(self.delay)
         gpio.output(self.pin_step,False)

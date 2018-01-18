@@ -29,8 +29,7 @@
                 <Dir_Pin>15</Dir_Pin>
                 <MS1_Pin>23</MS1_Pin>
                 <MS2_Pin>24</MS2_Pin>
-                <Home_Low_Pin>5</Home_Low_Pin>
-                <Home_High_Pin>6</Home_High_Pin>
+                <Home_Pin>5</Home_Pin>
                 <Step>full_step</Step>
                 <Steps_Per_Rotation_Full>200</Steps_Per_Rotation_Full>
             </Servo>
