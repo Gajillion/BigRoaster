@@ -28,14 +28,9 @@ import Roaster
 from multiprocessing import Queue, Pipe, Process, current_process
 from Queue import Full
 from pid import pidpy as PIDController
-#from subprocess import Popen, PIPE, call
-#from datetime import datetime
-#from smbus import SMBus
-#import RPi.GPIO as GPIO
-
-import Temp1Wire
 
 global parent_conn
+roastTime = 0
 roasterStatusQ = []
 
 app = Flask(__name__, template_folder='templates')
@@ -55,9 +50,12 @@ class param:
         "set_point" : 0.0,
         "boil_manage_temp" : 200,
         "num_pnts_smooth" : 5,
-        "k_param" : 44,
-        "i_param" : 165,
-        "d_param" : 4             
+      #  "k_param" : 44,
+      #  "i_param" : 165,
+      #  "d_param" : 4             
+        "k_param" : 1.2,
+        "i_param" : 1,
+        "d_param" : 0.001             
     }
                       
 # main web page    
@@ -68,27 +66,8 @@ def index():
         return render_template(template_name, mode = param.status["mode"], set_point = param.status["set_point"], \
                                gasOutput = param.status["gasOutput"], sampleTime = param.status["sampleTime"], \
                                k_param = param.status["k_param"], i_param = param.status["i_param"], \
-                               d_param = param.status["d_param"])
+                               d_param = param.status["d_param"], numTempSensrs = param.status["numTempSensors"])
         
-    else: #request.method == 'POST' (first temp sensor / backwards compatibility)
-        # get command from web browser or Android   
-        #print request.form
-        param.status["mode"] = request.form["mode"] 
-        param.status["set_point"] = float(request.form["setpoint"])
-        param.status["gasOutput"] = float(request.form["dutycycle"]) #is boil duty cycle if mode == "boil"
-        param.status["sampleTime"] = float(request.form["cycletime"])
-        param.status["boil_manage_temp"] = float(request.form.get("boilManageTemp", param.status["boil_manage_temp"])) 
-        param.status["num_pnts_smooth"] = int(request.form.get("numPntsSmooth", param.status["num_pnts_smooth"])) 
-        param.status["k_param"] = float(request.form["k"])
-        param.status["i_param"] = float(request.form["i"])
-        param.status["d_param"] = float(request.form["d"])
-                
-        #send to main temp control process 
-        #if did not receive variable key value in POST, the param class default is used
-        parent_conn.send(param.status)  
-        
-        return 'OK'
-
 #post params (selectable temp sensor number)    
 @app.route('/postparams/<sensorNum>', methods=['POST'])
 def postparams(sensorNum=None):
@@ -101,8 +80,8 @@ def postparams(sensorNum=None):
     param.status["k_param"] = float(request.form["k"])
     param.status["i_param"] = float(request.form["i"])
     param.status["d_param"] = float(request.form["d"])
+    param.status["numTempSensors"] = int(request.form["numTempSensors"])
             
-    print pprint.pprint(param.status)
     #send to main temp control process 
     #if did not receive variable key value in POST, the param class default is used
     parent_conn.send(param.status)
@@ -123,8 +102,8 @@ def getstatus(roasterNum=None):
 
     return jsonify(**param.status)
 
-def getbrewtime():
-    return (time.time() - brewtime)    
+def getRoastTime():
+    return (time.time() - roastTime)    
        
 # Stand Alone Get Temperature Process               
 def getTempProc(conn, myTempSensor):
@@ -199,9 +178,11 @@ def packParamGet(numTempSensors, myTempSensorNum, temp, tempUnits, elapsed, mode
 # Main Temperature Control Process
 def tempControlProc(myRoaster, paramStatus, conn):
     parentTemps = []
+    oldMode = ''
 
     mode, sampleTime, gasOutput, boil_gasOutput, set_point, boil_manage_temp, num_pnts_smooth, \
     k_param, i_param, d_param = unPackParamInitAndPost(paramStatus)
+    oldMode = mode
 
     p = current_process()
     print('Starting:', p.name, p.pid)
@@ -281,6 +262,10 @@ def tempControlProc(myRoaster, paramStatus, conn):
                     if (readyPIDcalc == True):
                         gasOutput = pid.calcPID_reg4(tempMovingAverage, set_point, True)
                         # send to heat process every cycle
+                        if not oldMode == mode:
+                            myRoaster.getGasServo().setToSafeLow()
+                        print "%s changing to %s" %(oldMode,mode)
+                        oldMode = mode
                         parentHeat.send([sampleTime, gasOutput])
                         readyPIDcalc = False
 
@@ -295,6 +280,7 @@ def tempControlProc(myRoaster, paramStatus, conn):
                 while (statusQ.qsize() >= 2):
                     statusQ.get() #remove old status
 
+                logdata(tempSensorNum, temp, gasOutput)
                 print("Current Temp: %3.2f deg %s, Heat Output: %3.1f%%" \
                                                         % (temp, tempUnits, gasOutput))
 
@@ -315,15 +301,24 @@ def tempControlProc(myRoaster, paramStatus, conn):
                 print("auto selected")
                 pid = PIDController.pidpy(sampleTime, k_param, i_param, d_param) #init pid
                 gasOutput = pid.calcPID_reg4(tempMovingAverage, set_point, True)
+                # always zero out to lowest safe low before enabled modes
+                if not oldMode == mode:
+                    myRoaster.getGasServo().setToSafeLow()
                 parentHeat.send([sampleTime, gasOutput])
             if mode == "manual":
-                print("manual selected")
+                print("manual selected (%s and %s)" % (oldMode,mode))
                 gasOutput = gasOutput_temp
+                # always zero out to lowest safe low before enabled modes
+                if not oldMode == mode:
+                    print "setting to safeLow"
+                    myRoaster.getGasServo().setToSafeLow()
                 parentHeat.send([sampleTime, gasOutput])
             if mode == "off":
                 print("off selected")
-                gasOutput = 0
-                parentHeat.send([sampleTime, gasOutput])
+                # We don't care. Off is off. Always set to off.
+                myRoaster.getGasServo().setOff()
+
+            oldMode = mode
             readyPOST = False
 
 
@@ -331,15 +326,17 @@ def tempControlProc(myRoaster, paramStatus, conn):
 
 
 def logdata(tank, temp, heat):
-    f = open("brewery" + str(tank) + ".csv", "ab")
+    f = open("roasting" + str(tank) + ".csv", "ab")
     if sys.version_info >= (3, 0):
-        f.write("%3.1f;%3.3f;%3.3f\n".encode("utf8") % (getbrewtime(), temp, heat))
+        f.write("%3.1f;%3.3f;%3.3f\n".encode("utf8") % (getRoastTime(), temp, heat))
     else:
-        f.write("%3.1f;%3.3f;%3.3f\n" % (getbrewtime(), temp, heat))
+        f.write("%3.1f;%3.3f;%3.3f\n" % (getRoastTime(), temp, heat))
     f.close()
 
 
 if __name__ == '__main__':
+    roastTime = time.time()
+
     # Retrieve root element from config.xml for parsing
     tree = ET.parse('config.xml')
     xml_root = tree.getroot()
@@ -375,6 +372,9 @@ if __name__ == '__main__':
                                                     int(tempSensor.find('clk').text), \
                                                     int(tempSensor.find('cs').text), \
                                                     int(tempSensor.find('do').text))
+                
+            # hackity hack hack hack. why isn't param updated in the first call of index()?
+            param.status["numTempSensors"] = len(myRoaster.getTempSensors())
 
             # grab our gas servo
             servo       = roaster.find('Servo')
@@ -392,8 +392,9 @@ if __name__ == '__main__':
             # get our valve info
             valve    = roaster.find('Valve')
             maxTurns = int(valve.find('Max_Turns_Ceil').text)
-
-            myRoaster.addGasServo(servoId,driver,delay,step,direction,ms1,ms2,home,maxTurns,steps,stepsPer)
+            safeLow  = int(valve.find('Safe_Low_Percent').text)
+        
+            myRoaster.addGasServo(servoId,driver,delay,step,direction,ms1,ms2,home,maxTurns,safeLow,steps,stepsPer)
             myGasServo = myRoaster.getGasServo()
             
             statusQ = Queue(2) # blocking queue
