@@ -66,7 +66,7 @@ def index():
         return render_template(template_name, mode = param.status["mode"], set_point = param.status["set_point"], \
                                gasOutput = param.status["gasOutput"], sampleTime = param.status["sampleTime"], \
                                k_param = param.status["k_param"], i_param = param.status["i_param"], \
-                               d_param = param.status["d_param"], numTempSensrs = param.status["numTempSensors"])
+                               d_param = param.status["d_param"], numTempSensors = param.status["numTempSensors"])
         
 #post params (selectable temp sensor number)    
 @app.route('/postparams/<sensorNum>', methods=['POST'])
@@ -80,7 +80,7 @@ def postparams(sensorNum=None):
     param.status["k_param"] = float(request.form["k"])
     param.status["i_param"] = float(request.form["i"])
     param.status["d_param"] = float(request.form["d"])
-    param.status["numTempSensors"] = int(request.form["numTempSensors"])
+
             
     #send to main temp control process 
     #if did not receive variable key value in POST, the param class default is used
@@ -409,5 +409,4 @@ if __name__ == '__main__':
 
             myGasServo.home()
 
-    app.debug = True 
     app.run(use_reloader=False, host='0.0.0.0')
