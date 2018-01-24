@@ -1,4 +1,5 @@
 import RPi.GPIO as GPIO
+import time
 
 # Direction of rotation is dependent on how the motor is connected.
 # If the motor runs the wrong way swap the values of cw and ccw.
@@ -14,10 +15,11 @@ class GasServo:
     stepValue       = 'full_step'
     stepsInFull     = 200
     maxTurns        = ''
+    safeLowSteps    = ''
 
     def __init__(self, gasServoId, driver, delay, step, direction, ms1, ms2,\
-                    homePin = '', maxTurns = 0, stepValue = 'full_step', \
-                    stepsInFull = 200, sleep = 0, enable = 0, reset = 0):
+                    homePin='', maxTurns=0, safeLow=20, stepValue='full_step',\
+                    stepsInFull=200, sleep=0, enable=0, reset=0):
 
 
         gasDriver = __import__(driver)
@@ -38,6 +40,8 @@ class GasServo:
         self.stepsInFull    = stepsInFull
         self.stepValue      = stepValue
         self.maxTurns       = maxTurns
+        # safeLowSteps is the number of steps in the percentage of a single turn passed in safe Low 
+        self.safeLowSteps   = int(stepsInFull * (safeLow * 0.01))
         
         stepset = getattr(myDriver,'set_'+stepValue)
 
@@ -71,6 +75,21 @@ class GasServo:
     def getMaxTurns(self):
         return self.maxTurns
 
+    def setOff(self):
+        self.home()
+
+    # set our gas valve to the lowest setting without putting out the flame
+    def setToSafeLow(self):
+        # just to be sure
+        self.home()
+        time.sleep(0.5)
+        for s in range(0,self.safeLowSteps):
+            self.myGasServo.step()
+        # safeLow is our floor, the lowest we'll ever go. Consider output and location 0
+        self.gasOutput = 0
+        self.gasOutputTurns = 0
+
+    # Turn the valve all the way off
     def home(self):
         print("Homing servo %s" % self.gasServoId)
         self.myGasServo.set_direction(CCW)

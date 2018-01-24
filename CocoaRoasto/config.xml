@@ -36,6 +36,7 @@
             <Valve>
                 <!-- This is a ceiling value for the maximum turns of the valve. Round up to the nearest whole number. -->
                 <Max_Turns_Ceil>2</Max_Turns_Ceil>
+                <Safe_Low_Percent>10</Safe_Low_Percent>
             </Valve>
         </Roaster>
     </Roasters>

@@ -20,9 +20,9 @@ class Roaster:
         return self.tempProbes
 
     def addGasServo(self,servoId,driver,delay,step,direction,ms1,ms2,\
-                    homePin='',maxTurns=0,sleep=0,enable=0,reset=0):
+                    homePin='',maxTurns=0,safeLow=20,sleep=0,enable=0,reset=0):
         self.gasServo = GasServo.GasServo(servoId,driver,delay,step,direction,ms1,ms2,\
-                    homePin,maxTurns,sleep,enable,reset)
+                    homePin,maxTurns,safeLow,sleep,enable,reset)
 
     def getGasServo(self):
         return self.gasServo
