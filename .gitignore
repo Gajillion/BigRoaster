@@ -1,2 +1,4 @@
 roasting0.csv
+access.log
 *.pyc
+*.swp

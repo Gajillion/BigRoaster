@@ -27,16 +27,74 @@
 
 			<div class="row">
 				<div class="col-xs-5">
+                    <!-- if we ever control more than one roaster, we'd have to iterate over this table -->
 					<table id="dataTable" class="table table-bordered table-condensed table-responsive style="border-collapse:collapse;"">
 						<thead>
 							<tr>
-								<th class="col-xs-4">Vessel</th>
+								<th colspan="3">Roaster</th>
+							</tr>
+						</thead>
+						<thead>
+							<tr>
+								<th class="col-xs-4"></th>
 								<th class="col-xs-4">Temp</th>
 								<th class="col-xs-4">Heat Output</th>
 
 							</tr>
 						</thead>
 						<tbody>
+                        {% for tempSensor in tempSensors %}
+							<tr id="{{loop.index}}Row" data-toggle="collapse" data-target="#extra_data_info{{loop.index}}" class="selectRow row-highlight accordion-toggle">
+								<td align="center"><h5>sensor: {{tempSensor[1]}}</h5></td>
+								<td align="center"><h5><span id="tempResponse">60</span><span id="tempResponseUnits">&degF</span></h5></td>
+								<td align="center"><h5></h5></td>
+								<!-- <td align="center"><h5><span id="dutycycleResponse">0</span><span id="dutyCycleUnits"> </span></h5></td> -->
+							</tr>
+							<tr>
+								<td colspan="3" class="hiddenRow" id="vessel{{loop.index}}">
+								<div class="accordian-body collapse" id="extra_data_info{{loop.index}}">
+
+									<div class="voffset15"></div>
+									Mode:<span id="modeResponse" class="label label-default"></span>
+									<br>
+									Sample Time(sec): <span id="cycletimeResponse" class="label label-default"></span>
+									<br>
+									Set Point(<span id="setpointResponseUnits"></span>): <span id="setpointResponse" class="label label-default"></span>
+									<br>
+									Kc:<span id="k_paramResponse" class="label label-default"></span>
+									Ti:<span id="i_paramResponse" class="label label-default"></span>
+									Td:<span id="d_paramResponse" class="label label-default"></span>
+
+									<div class="voffset15"></div>
+
+								</div></td>
+							</tr>
+                        {% endfor %}
+							<tr id="valveRow" data-toggle="collapse" data-target="#extra_data_info1" class="selectRow row-highlight accordion-toggle">
+								<td align="center"><h5>gas valve: {{gasValve[0]}}</h5></td>
+								<td align="center"><h5></h5></td>
+								<td align="center"><h5><span id="dutycycleResponse">0</span><span id="dutyCycleUnits"> </span></h5></td>
+							</tr>
+							<tr>
+								<td colspan="3" class="hiddenRow" id="vessel{{loop.index}}">
+								<div class="accordian-body collapse" id="extra_data_info{{loop.index}}">
+
+									<div class="voffset15"></div>
+									Mode:<span id="modeResponse" class="label label-default"></span>
+									<br>
+									Sample Time(sec): <span id="cycletimeResponse" class="label label-default"></span>
+									<br>
+									Set Point(<span id="setpointResponseUnits"></span>): <span id="setpointResponse" class="label label-default"></span>
+									<br>
+									Kc:<span id="k_paramResponse" class="label label-default"></span>
+									Ti:<span id="i_paramResponse" class="label label-default"></span>
+									Td:<span id="d_paramResponse" class="label label-default"></span>
+
+									<div class="voffset15"></div>
+
+								</div></td>
+							</tr>
+<!--
 							<tr id="firstRow" data-toggle="collapse" data-target="#extra_data_info1" class="selectRow row-highlight accordion-toggle">
 								<td align="center"><h5>vessel1</h5></td>
 								<td align="center"><h5><span id="tempResponse">60</span><span id="tempResponseUnits">&degF</span></h5></td>
@@ -111,6 +169,7 @@
 
 								</div></td>
 							</tr>
+-->
 						</tbody>
 					</table>
 
@@ -243,26 +302,6 @@
 							</div>
 					</fieldset>
 				</div>
-				<div class="row">
-					<fieldset class="border">
-
-						<legend class="border">
-							GPIO Control Panel
-						</legend>
-
-						<div class="voffset15"></div>
-
-						<label id="GPIO_label1" class="switch-light well col-xs-3" onclick="">
-							<input id="GPIO1" type="checkbox">
-							<span>PUMP/STIR1:<span>Off</span> <span>On</span> </span> <a id="GPIO_Color1" class="btn btn-danger"></a> </label>
-
-						<label id="GPIO_label2" class="switch-light well col-xs-3" onclick="">
-							<input id="GPIO2" type="checkbox">
-							<span>&nbsp&nbspPUMP/STIR2:&nbsp&nbsp<span>Off</span> <span>On</span> </span> <a id="GPIO_Color2" class="btn btn-danger"></a> </label>
-
-					</fieldset>
-				</div>
-
 			</div>
 		</div>
 

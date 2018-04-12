@@ -29,6 +29,9 @@ from multiprocessing import Queue, Pipe, Process, current_process
 from Queue import Full
 from pid import pidpy as PIDController
 
+import logging
+from logging.handlers import RotatingFileHandler
+
 global parent_conn
 roastTime = 0
 roasterStatusQ = []
@@ -39,6 +42,8 @@ app = Flask(__name__, template_folder='templates')
 #Parameters that are used in the temperature control process
 class param:
     status = {
+        "tempSensors" : [],
+        "gasValve" : [],
         "numTempSensors" : 0,
         "temp" : "0",
         "tempUnits" : "F",
@@ -63,10 +68,13 @@ class param:
 def index():
     if request.method == 'GET':
         #render main page
+        print param.status
         return render_template(template_name, mode = param.status["mode"], set_point = param.status["set_point"], \
-                               gasOutput = param.status["gasOutput"], sampleTime = param.status["sampleTime"], \
-                               k_param = param.status["k_param"], i_param = param.status["i_param"], \
-                               d_param = param.status["d_param"], numTempSensors = param.status["numTempSensors"])
+                                gasOutput = param.status["gasOutput"], sampleTime = param.status["sampleTime"], \
+                                k_param = param.status["k_param"], i_param = param.status["i_param"], \
+                                d_param = param.status["d_param"], numTempSensors = param.status["numTempSensors"], \
+                                tempSensors = param.status["tempSensors"], gasValve = param.status["gasValve"],\
+                                test_array = ['X','Y','Z'])
         
 #post params (selectable temp sensor number)    
 @app.route('/postparams/<sensorNum>', methods=['POST'])
@@ -154,7 +162,7 @@ def unPackParamInitAndPost(paramStatus):
            k_param, i_param, d_param
 
 def packParamGet(numTempSensors, myTempSensorNum, temp, tempUnits, elapsed, mode, sampleTime, gasOutput, boil_gasOutput, set_point, \
-                                 boil_manage_temp, num_pnts_smooth, k_param, i_param, d_param):
+                                 boil_manage_temp, num_pnts_smooth, k_param, i_param, d_param, tempSensors, gasValve):
     
     param.status["numTempSensors"] = numTempSensors
     param.status["myTempSensorNum"] = myTempSensorNum
@@ -171,6 +179,8 @@ def packParamGet(numTempSensors, myTempSensorNum, temp, tempUnits, elapsed, mode
     param.status["k_param"] = k_param
     param.status["i_param"] = i_param
     param.status["d_param"] = d_param
+    param.status["tempSensors"] = tempSensors
+    param.status["gasValve"] = gasValve
 
     return param.status
 
@@ -218,6 +228,9 @@ def tempControlProc(myRoaster, paramStatus, conn):
 
     while(True):
         readytemp = False
+        tempSensorsParam = []
+        gasServoParam = []
+ 
         for tempSensor in tempSensors:
             parentTemp = tempSensor.getTempPipe()
             while parentTemp.poll(): # Poll Get Temperature Process Pipe
@@ -264,15 +277,20 @@ def tempControlProc(myRoaster, paramStatus, conn):
                         # send to heat process every cycle
                         if not oldMode == mode:
                             myRoaster.getGasServo().setToSafeLow()
-                        print "%s changing to %s" %(oldMode,mode)
+                            print "%s changing to %s" %(oldMode,mode)
                         oldMode = mode
                         parentHeat.send([sampleTime, gasOutput])
                         readyPIDcalc = False
 
+                tempSensorsParam.append([tempSensor.getTempSensorId(),tempSensor.getTempSensorName(),temp_str])
+                gasServoParam = [myRoaster.getGasServo().getServoId(),myRoaster.getGasServo().getSafeLow(),gasOutput]
                 # put current status in queue
                 try:
                     paramStatus = packParamGet(numTempSensors, tempSensor.getTempSensorId(), temp_str, tempUnits, elapsed, mode, sampleTime, gasOutput, \
-                            boil_gasOutput, set_point, boil_manage_temp, num_pnts_smooth, k_param, i_param, d_param)
+                            boil_gasOutput, set_point, boil_manage_temp, num_pnts_smooth, k_param, i_param, d_param,tempSensorsParam, gasServoParam) 
+#        "tempSensors" : [],
+#        "gasValve" : [],
+
                     statusQ.put(paramStatus) #GET request
                 except Full:
                     pass
@@ -373,7 +391,9 @@ if __name__ == '__main__':
                                                     int(tempSensor.find('cs').text), \
                                                     int(tempSensor.find('do').text))
                 
-            # hackity hack hack hack. why isn't param updated in the first call of index()?
+                # hackity hack hack hack. why isn't param updated in the first call of index()?
+                param.status["tempSensors"].append([tempSensorId,tempSensorName,0])
+
             param.status["numTempSensors"] = len(myRoaster.getTempSensors())
 
             # grab our gas servo
@@ -389,11 +409,14 @@ if __name__ == '__main__':
             steps       = servo.find('Step').text
             stepsPer    = int(servo.find('Steps_Per_Rotation_Full').text)
 
+
             # get our valve info
             valve    = roaster.find('Valve')
             maxTurns = int(valve.find('Max_Turns_Ceil').text)
             safeLow  = int(valve.find('Safe_Low_Percent').text)
         
+            param.status["gasValve"] = [servoId,safeLow,0]
+
             myRoaster.addGasServo(servoId,driver,delay,step,direction,ms1,ms2,home,maxTurns,safeLow,steps,stepsPer)
             myGasServo = myRoaster.getGasServo()
             
@@ -409,4 +432,8 @@ if __name__ == '__main__':
 
             myGasServo.home()
 
+    logger = logging.getLogger('werkzeug')
+    handler = logging.FileHandler('access.log')
+    logger.addHandler(handler)
+    app.debug = True
     app.run(use_reloader=False, host='0.0.0.0')

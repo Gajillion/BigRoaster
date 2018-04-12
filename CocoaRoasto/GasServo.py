@@ -92,6 +92,11 @@ class GasServo:
     # Turn the valve all the way off
     def home(self):
         print("Homing servo %s" % self.gasServoId)
+        # Go at least 10 degrees off to make sure we're homing properly
+        self.myGasServo.set_direction(CW)
+        self.setGasOutput(10)
+
+        # Now find home
         self.myGasServo.set_direction(CCW)
         while(GPIO.input(self.homePin) == True):
             self.myGasServo.step()
@@ -99,3 +104,9 @@ class GasServo:
         print("Servo %s is homed" % self.gasServoId)
         self.gasOutput = 0
         self.gasOutputTurns = 0
+
+    def getServoId(self):
+        return self.gasServoId
+
+    def getSafeLow(self):
+        return self.safeLowSteps
