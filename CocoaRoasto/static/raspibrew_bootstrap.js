@@ -292,7 +292,7 @@ function waitForMsg() {
 			storeData(0, data);
 
 			if (capture_on == 1) {
-				if ($('#firstRow').hasClass('row-highlight') == true) {
+				if ($('#1Row').hasClass('row-highlight') == true) {
 					plotData(0, data);
 				}
 				setTimeout('waitForMsg()', 1);
@@ -442,7 +442,7 @@ jQuery(document).ready(function() {
 
 		formdata = jQuery(this).serialize();
 
-		if ($('#firstRow').hasClass('row-highlight') == true) {
+		if ($('#1Row').hasClass('row-highlight') == true) {
 
 			jQuery.ajax({
 				type : "POST",
