@@ -98,9 +98,16 @@ class GasServo:
 
         # Now find home
         self.myGasServo.set_direction(CCW)
-        while(GPIO.input(self.homePin) == True):
+        stepCount = 0
+        while(GPIO.input(self.homePin) == True and stepCount < self.stepsInFull):
+            stepCount = stepCount + 1    
             self.myGasServo.step()
+
         self.myGasServo.set_direction(CW)
+        if stepCount >= self.stepsInFull:
+            print "homing failed"
+            return -1
+
         print("Servo %s is homed" % self.gasServoId)
         self.gasOutput = 0
         self.gasOutputTurns = 0
