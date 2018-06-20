@@ -35,6 +35,7 @@ from logging.handlers import RotatingFileHandler
 global parent_conn
 roastTime = 0
 roasterStatusQ = []
+DEBUG = 0
 
 app = Flask(__name__, template_folder='templates')
 #url_for('static', filename='raspibrew.css')
@@ -299,7 +300,8 @@ def tempControlProc(myRoaster, paramStatus, conn):
                     statusQ.get() #remove old status
 
                 logdata(tempSensorNum, temp, gasOutput)
-                print("Current Temp: %3.2f deg %s, Heat Output: %3.1f%%" \
+                if DEBUG:
+                    print("Current Temp: %3.2f deg %s, Heat Output: %3.1f%%" \
                                                         % (temp, tempUnits, gasOutput))
 
         while parentHeat.poll(): # Poll Heat Process Pipe
