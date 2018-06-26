@@ -227,6 +227,9 @@ def tempControlProc(myRoaster, paramStatus, conn):
     tempMovingAverageList = []
     tempMovingAverage = 0.0
 
+    slopeMovingAverageList = []
+    slopeMovingAverage = 0.0
+
     while(True):
         readytemp = False
         tempSensorsParam = []
@@ -247,26 +250,36 @@ def tempControlProc(myRoaster, paramStatus, conn):
                     temp = temp_C
 
                 temp_str = "%3.2f" % temp
+                
                 readytemp = True
                 
             if readytemp == True:
                 if mode == "auto":
-                    tempMovingAverageList.append(temp)
+                    tempMovingAverageList.append({"temp":temp,"timestamp":time.time()})
 
                     # smooth data
                     tempMovingAverage = 0.0 # moving avg init
+                    slopeMovingAverage = 0.0
                     while (len(tempMovingAverageList) > num_pnts_smooth):
                         tempMovingAverageList.pop(0) # remove oldest elements in list
+                    while (len(slopeMovingAverageList) > num_pnts_smooth-1):
+                        slopeMovingAverageList.pop(0) # slopeMovingAverage is one less because it's a diff 
 
-                    if (len(tempMovingAverageList) < num_pnts_smooth):
-                        for temp_pnt in tempMovingAverageList:
-                            tempMovingAverage += temp_pnt
-                        tempMovingAverage /= len(tempMovingAverageList)
-                    else: # len(tempMovingAverageList) == num_pnts_smooth
-                        for temp_idx in range(num_pnts_smooth):
-                            tempMovingAverage += tempMovingAverageList[temp_idx]
-                        tempMovingAverage /= num_pnts_smooth
+                    for temp_pnt in tempMovingAverageList:
+                        tempMovingAverage += temp_pnt["temp"]
+                    tempMovingAverage /= len(tempMovingAverageList)
 
+                    # Now, compute the moving average of the slope
+                    # We need at least two values to compute a difference
+                    if len(tempMovingAverageList) > 1:
+                        i = 0
+                        while i < len(tempMovingAverageList):
+                            diff = tempMovingAverageList[i+1]["temp"] - tempMovingAverageList[i]["temp"]
+                            slope = diff / (tempMovingAverageList[i+1]["timestamp"] - tempMovingAverageList[i]["timestamp"])
+                            slopeMovingAverage =+ slope
+                            i += 1
+                        slopeMovingAverage /= len(tempMovingAverageList)
+ 
             #        print "len(tempMovingAverageList) = %d" % len(tempMovingAverageList)
             #        print "Num Points smooth = %d" % num_pnts_smooth
             #        print "tempMovingAverage = %.2f" % tempMovingAverage
@@ -274,7 +287,7 @@ def tempControlProc(myRoaster, paramStatus, conn):
 
                     # calculate PID every cycle
                     if (readyPIDcalc == True):
-                        gasOutput = pid.calcPID_reg4(tempMovingAverage, set_point, True)
+                        gasOutput = pid.calcPID_reg4(slopMovingAverage, set_point, True)
                         # send to heat process every cycle
                         if not oldMode == mode:
                             myRoaster.getGasServo().setToSafeLow()
