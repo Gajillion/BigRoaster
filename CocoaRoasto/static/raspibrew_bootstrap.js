@@ -24,94 +24,107 @@ var timeElapsed, tempDataArray, heatDataArray, setpointDataArray, dutyCycle, opt
 var capture_on = 1;
 var numTempSensors, tempUnits, temp, setpoint;
 
+// Column highlighting
+$('input[name=profilelock]').on('click', function() {
+    var $currentTable = $(this).closest('table');
+    var index = $(this).parent().index();
+    $currentTable.find('td').removeClass('col-highlight');
+    $currentTable.find('input[type=number]').removeAttr("disabled");
+    $currentTable.find('tr').each(function() {
+        if($(this).hasClass("lockable")){
+            var $mytd = $(this).find('td').eq(index-1)
+            $mytd.addClass('col-highlight');
+            $mytd.find('input[type=number]').each(function() { $(this).attr("disabled","disabled"); });
+        }
+    });
+});
+
+// MAFS!!
+$('input.profile').on('change paste keyup', function() {
+    var myIndex = $(this).closest('td').index()-1;
+    var $myRow = $(this).closest('tr');
+    var lockedCol = $myRow.find('input[disabled=disabled]').closest('td').index() - 1;
+    var rowNum = $myRow.index();
+    var inArr = [];
+    var tempDiff = -1;
+    var oldTemp = -1;
+
+    // We have 5 rows and only care about calculating for three
+    if(rowNum <= 1 ){
+        alert("no previous row");
+        return;
+    }
+    else {
+        var oldTemp = $('#profileTable').find('tr').eq(rowNum).find('td').eq(-1).find('input[type=number]').val();
+        if (oldTemp == ''){
+            return;
+        }
+    }
+
+    // Well, shit. We have to calculate our row AND every row after ours.
+    // temp/time = ramp
+    // ramp*time = temp
+    // temp/ramp = time
+    var valCount = 0;
+    $myRow.find('input').each(function(column, inVal) {
+        inArr.push($(inVal).val()); 
+        if($(inVal).val() != ''){
+            valCount++;
+        }
+    });
+
+    // need at least two values to calculate
+    if (valCount <= 1){
+        //alert('Not enough values to calculate');
+        return;
+    }
+
+    var [ramp,time,temp] = inArr;
+    if(valCount == 3){
+        // This is the only time it's important to know which one is locked
+        if(lockedCol == 0){
+            ramp = (temp - oldTemp) / time;
+        }
+        else if (lockedCol = 1){
+            time = (temp - oldTemp) / ramp;
+        }
+        else{
+            temp = ramp * time;
+        }
+    }
+    else{
+        if(ramp == ''){
+            ramp = (temp - oldTemp) / time;
+        }
+        else if(temp == ''){
+            temp = ramp * time;
+        }
+        else{
+            time = (temp - oldTemp) / ramp;
+        }
+    }
+
+    $inputs = $myRow.find('input[type=number]');
+    var rampIn = $myRow.find('input[type=number]')[0];
+    var timeIn = $myRow.find('input[type=number]')[1];
+    var tempIn = $myRow.find('input[type=number]')[2];
+
+    rampIn.value = ramp;
+    timeIn.value = time;
+    tempIn.value = temp;
+/*
+    alert(inArr);
+    alert(inArr[0]);
+    alert(inArr[1]);
+    alert(inArr[2]);
+*/
+    
+});
+
 $('.selectRow').click(function() {
 	$('.selectRow').removeClass("row-highlight");
-	// removes all the highlights from the table
+ // removes all the highlights from the table
 	$(this).addClass('row-highlight');
-});
-
-$("#GPIO1").change(function() {
-
-	if (this.checked) {
-		jQuery.ajax({
-			type : "GET",
-			url : "/GPIO_Toggle/1/on",
-			dataType : "json",
-			async : true,
-			cache : false,
-			timeout : 50000,
-			success : function(data) {
-				$("#GPIO_label1").attr('title', 'Switch controls pin '+data.pin);
-				if (data.status == "on") {	
-					if ($("#GPIO_Color1").hasClass('btn-danger')) {
-						$("#GPIO_Color1").removeClass('btn-danger');
-						$("#GPIO_Color1").addClass('btn-success');
-					}
-				}
-			},
-		});
-	} else {
-		jQuery.ajax({
-			type : "GET",
-			url : "/GPIO_Toggle/1/off",
-			dataType : "json",
-			async : true,
-			cache : false,
-			timeout : 50000,
-			success : function(data) {
-				$("#GPIO_label1").attr('title', 'Switch controls pin '+data.pin);
-				if (data.status == "off") {
-					if ($("#GPIO_Color1").hasClass('btn-success')) {
-						$("#GPIO_Color1").removeClass('btn-success');
-						$("#GPIO_Color1").addClass('btn-danger');
-					}
-				}
-			},
-		});
-
-	}
-});
-
-$("#GPIO2").change(function() {
-
-	if (this.checked) {
-		jQuery.ajax({
-			type : "GET",
-			url : "/GPIO_Toggle/2/on",
-			dataType : "json",
-			async : true,
-			cache : false,
-			timeout : 50000,
-			success : function(data) {
-				$("#GPIO_label2").attr('title', 'Switch controls pin '+data.pin);
-				if (data.status == "on") {
-					if ($("#GPIO_Color2").hasClass('btn-danger')) {
-						$("#GPIO_Color2").removeClass('btn-danger');
-						$("#GPIO_Color2").addClass('btn-success');
-					}
-				}
-			},
-		});
-	} else {
-		jQuery.ajax({
-			type : "GET",
-			url : "/GPIO_Toggle/2/off",
-			dataType : "json",
-			async : true,
-			cache : false,
-			timeout : 50000,
-			success : function(data) {
-				$("#GPIO_label2").attr('title', 'Switch controls pin '+data.pin);
-				if (data.status == "off") {
-					if ($("#GPIO_Color2").hasClass('btn-success')) {
-						$("#GPIO_Color2").removeClass('btn-success');
-						$("#GPIO_Color2").addClass('btn-danger');
-					}
-				}
-			},
-		});
-
-	}
 });
 
 function findLS(selected_start, selected_end, in_pointArray) {
@@ -331,6 +344,7 @@ function waitForMsg() {
 				jQuery('#k_paramResponse2').html(data.k_param);
 				jQuery('#i_paramResponse2').html(data.i_param);
 				jQuery('#d_paramResponse2').html(data.d_param);
+				jQuery('#d_paramResponse2').html(data.d_param);
 
 				storeData(1, data);
 
@@ -389,6 +403,21 @@ function waitForMsg() {
 
 jQuery(document).ready(function() {
 
+    // one-time on load, lock the time column
+    jQuery('#timelock').attr("checked",true);
+    var currentTable = $('#profileTable');
+    var index = $('th[name=timecol]').index();
+    currentTable.find('td').removeClass('col-highlight');
+    currentTable.find('input[type=number]').removeAttr("disabled");
+    currentTable.find('tr').each(function() {
+        if($(this).hasClass("lockable")){
+            var $mytd = $(this).find('td').eq(index-1)
+            $mytd.addClass('col-highlight');
+            $mytd.find('input[type=number]').each(function() { $(this).attr("disabled","disabled"); });
+        }
+    });
+
+    
 	jQuery('#stop').click(function() {
 		capture_on = 0;
 	});
@@ -399,12 +428,13 @@ jQuery(document).ready(function() {
 		timeElapsed = [0, 0, 0];
 		waitForMsg();
 	});
-	//jQuery('#calcpid').click(function() {
-	//});
 	jQuery("#tempplot").bind("plotselected", function(event, ranges) {
 		var selected_start = ranges.xaxis.from;
 		var selected_end = ranges.xaxis.to;
 		var k_param, i_param, d_param, normalizedSlope, pointArray, m, b, deadTime; 
+        var dryingRamp, dryingFinaltemp, dryingTime;
+        var developmentRamp, developmentFinaltemp, developmentTime;
+        var finishRamp, finishFinaltemp, finishTime;
 		var LS = findLS(selected_start, selected_end, tempDataArray[0]);
 		pointArray = LS[0]; m = LS[1]; b = LS[2];
 		deadTime = pointArray[0][0];
@@ -436,6 +466,28 @@ jQuery(document).ready(function() {
 			previousPoint = null;
 		}
 
+	});
+
+	jQuery('#roastingProfileForm').submit(function() {
+		formdata = jQuery(this).serialize();
+        // See if all of our values are filled in
+        var pairs = formdata.split('&');
+        pairs.some(function(pair){
+            val = pair.split('=')[1]; 
+            if (val == ''){
+                window.alert('All profile values are required');
+                return true;
+            } 
+        });
+        jQuery.ajax({
+            type : "POST",
+            url : "/postprofile",
+            data : formdata,
+            success : function(data) {
+            },
+        });
+
+		return false;
 	});
 
 	jQuery('#controlPanelForm').submit(function() {
