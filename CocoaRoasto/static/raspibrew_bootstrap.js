@@ -40,85 +40,73 @@ $('input[name=profilelock]').on('click', function() {
 });
 
 // MAFS!!
+// Calculate the profile table
 $('input.profile').on('change paste keyup', function() {
-    var myIndex = $(this).closest('td').index()-1;
-    var $myRow = $(this).closest('tr');
-    var lockedCol = $myRow.find('input[disabled=disabled]').closest('td').index() - 1;
-    var rowNum = $myRow.index();
-    var inArr = [];
-    var tempDiff = -1;
-    var oldTemp = -1;
+    var tableValues = new Array();
+    var lockedCol = $('#profileTable').find('input[disabled=disabled]').closest('td').index() - 1;
+    var myRow = $(this).closest('tr').index() - 1;
+    var myCol = $(this).closest('td').index() - 1;
 
-    // We have 5 rows and only care about calculating for three
-    if(rowNum <= 1 ){
-        alert("no previous row");
-        return;
-    }
-    else {
-        var oldTemp = $('#profileTable').find('tr').eq(rowNum).find('td').eq(-1).find('input[type=number]').val();
-        if (oldTemp == ''){
-            return;
+    $('#profileTable tr').each(function(row, tr){
+        // ramp, time, temp
+        if(row == 2){
+            tableValues[row] = ['','', $(tr).find('td:eq(2)').find('input').val()];
         }
-    }
-
-    // Well, shit. We have to calculate our row AND every row after ours.
-    // temp/time = ramp
-    // ramp*time = temp
-    // temp/ramp = time
-    var valCount = 0;
-    $myRow.find('input').each(function(column, inVal) {
-        inArr.push($(inVal).val()); 
-        if($(inVal).val() != ''){
-            valCount++;
+        else{
+            tableValues[row] = [
+                $(tr).find('td:eq(0)').find('input').val(),                        
+                $(tr).find('td:eq(1)').find('input').val(),                        
+                $(tr).find('td:eq(2)').find('input').val()
+                ];
         }
     });
-
-    // need at least two values to calculate
-    if (valCount <= 1){
-        //alert('Not enough values to calculate');
-        return;
-    }
-
-    var [ramp,time,temp] = inArr;
-    if(valCount == 3){
-        // This is the only time it's important to know which one is locked
-        if(lockedCol == 0){
-            ramp = (temp - oldTemp) / time;
-        }
-        else if (lockedCol = 1){
-            time = (temp - oldTemp) / ramp;
-        }
-        else{
-            temp = ramp * time;
-        }
-    }
-    else{
-        if(ramp == ''){
-            ramp = (temp - oldTemp) / time;
-        }
-        else if(temp == ''){
-            temp = ramp * time;
-        }
-        else{
-            time = (temp - oldTemp) / ramp;
-        }
-    }
-
-    $inputs = $myRow.find('input[type=number]');
-    var rampIn = $myRow.find('input[type=number]')[0];
-    var timeIn = $myRow.find('input[type=number]')[1];
-    var tempIn = $myRow.find('input[type=number]')[2];
-
-    rampIn.value = ramp;
-    timeIn.value = time;
-    tempIn.value = temp;
-/*
-    alert(inArr);
-    alert(inArr[0]);
-    alert(inArr[1]);
-    alert(inArr[2]);
-*/
+    // First row is headers, second is radio buttons
+    tableValues.shift();
+    tableValues.shift();
     
+    for(var i = 1; i < tableValues.length; i++){
+        var oldTemp = tableValues[i-1][2];
+        // Only calculate if there's an old temperature
+        if(oldTemp != ''){ 
+            var full = 0;
+            var empty = lockedCol;
+            for(var j = 0; j < 3; j++){
+                if(tableValues[i][j] != ''){
+                    full += 1;
+                }
+                else{
+                    empty = j;
+                }
+            }
+
+            if(full < 3 && i == myRow && empty == myCol){
+                // Don't do anything if we've just cleared out our input field
+                full = 0;
+            }
+            if (full >= 2){
+                // If we have 2, we calculate the one that's empty
+                if(empty == 0){
+                    tableValues[i][0] = (tableValues[i][2] - oldTemp) / tableValues[i][1];
+                }
+                if(empty == 1){
+                    tableValues[i][1] = (tableValues[i][2] - oldTemp) / tableValues[i][0];
+                }
+                if(empty == 2){
+                    tableValues[i][2] = tableValues[i][0] * tableValues[i][1];
+                }
+            }
+            // Otherwise we fall through. Need at least two values to calculate
+        }
+    }
+
+    $('#profileTable input[type=number]').each(function(count,input){
+        if(count == 0){
+            input.value = tableValues[0][2];
+        }
+        else{
+            input.value = tableValues[Math.floor((count+2)/3)][(count+2) % 3];
+        }
+    });
 });
 
 $('.selectRow').click(function() {
