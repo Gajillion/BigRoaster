@@ -232,7 +232,7 @@
 						</legend>
 						<div class="row">
 							<div class="RoastingProfile" id="roastingprofile">
-                                <form id="roastingProfileForm" method="post" class="form-horizontal" role="form">
+                                <form id="roastingProfileForm" method="post" class="form-horizontal" role="form" enctype="multipart/form-data">
                                 <table id="profileTable" class="table table-bordered table-condensed table-responsive style="border-collapse:collapse;"">
                                     <thead>
                                         <tr>
@@ -261,7 +261,7 @@
                                             <td align="center" class="col-xs-3"><h5></h5></td>
                                             <td align="center" class="col-xs-3"><h5>
                                                 <div class="input-group">
-                                                    <input type="number" step="any" name="ambienttemp" class="form-control profile" id="ambientTemp" value={{ambient_temp}}>
+                                                    <input type="number" step="any" name="ambientfinaltemp" class="form-control profile" id="ambientFinaltemp" value={{ambient_finaltemp}}>
                                                     <span id="profileTimeUnits" class="input-group-addon">&degF</span></h5>
                                                 </div>
                                             </td>
@@ -282,7 +282,7 @@
                                             </td>
                                             <td align="center" class="col-xs-3"><h5>
                                                 <div class="input-group">
-                                                    <input type="number" step="0.25" name="dryingfinaltemp" class="form-control profile" id="dryingFinaltemp" value={{drying_finaltemp}}>
+                                                    <input type="number" step="1" name="dryingfinaltemp" class="form-control profile" id="dryingFinaltemp" value={{drying_finaltemp}}>
                                                     <span id="profileTempUnits" class="input-group-addon">&degF</span></h5>
                                                 </div>
                                             </td>
@@ -303,7 +303,7 @@
                                             </td>
                                             <td align="center" class="col-xs-3"><h5>
                                                 <div class="input-group">
-                                                    <input type="number" step="0.25" name="developmentfinaltemp" class="form-control profile" id="developmentFinaltemp" value={{development_finaltemp}}>
+                                                    <input type="number" step="1" name="developmentfinaltemp" class="form-control profile" id="developmentFinaltemp" value={{development_finaltemp}}>
                                                     <span id="profileTempUnits" class="input-group-addon">&degF</span></h5>
                                                 </div>
                                             </td>
@@ -324,39 +324,48 @@
                                             </td>
                                             <td align="center" class="col-xs-3"><h5>
                                                 <div class="input-group">
-                                                    <input type="number" step="0.25" name="finishfinaltemp" class="form-control profile" id="finishFinaltemp" value={{finish_finaltemp}}>
+                                                    <input type="number" step="1" name="finishfinaltemp" class="form-control profile" id="finishFinaltemp" value={{finish_finaltemp}}>
                                                     <span id="profileTempUnits" class="input-group-addon">&degF EOR</span></h5>
                                                 </div>
                                             </td>
                                         </tr>
                                     </tbody>
                                 </table>
-                                <button id = "saveprofile" type="submit" class="btn btn-info">
-                                    Save Profile
-                                </button>
+				                <div class="col-xs-12 hidden-xs">
+                                    <button id = "saveprofile" class="btn btn-info">
+                                        Save Profile
+                                    </button>
+                                    
+                                        <button id="uploadprofile" class="btn btn-info" disabled>
+                                            Upload
+                                        </button>
+                                        <div class="btn-group">
+                                            <input id="loadprofile" type="file" class="btn btn-info"/>
+                                        </div>
+                                </div>
                                 </form>
-							</div>
-					</fieldset>
-				</div>
-			</div>
-		</div>
+                                </div>
+                        </fieldset>
+                    </div>
+                </div>
+            </div>
 
-		<div class="row">
-			<div class="col-xs-4">
+            <div class="row">
+                <div class="col-xs-4">
 
-			</div>
+                </div>
 
-		</div>
-		<!-- row -->
+            </div>
+            <!-- row -->
 
-		</div><!-- /.container -->
+            </div><!-- /.container -->
 
-		<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-		<script type="text/javascript" src="static/external/jquery-2.0.3/jquery-2.0.3.min.js"></script>
-		<!-- Include all compiled plugins (below), or include individual files as needed -->
-		<script type="text/javascript" src="static/external/bootstrap-3.0.3/js/bootstrap.min.js"></script>
-		<script type="text/javascript" src="static/external/flot-0.8.2/jquery.flot.js"></script>
-		<script type="text/javascript" src="static/external/flot-0.8.2/jquery.flot.selection.js"></script>
-		<script type="text/javascript" src="static/raspibrew_bootstrap.js"></script>
-	</body>
-</html>
+            <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+            <script type="text/javascript" src="static/external/jquery-2.0.3/jquery-2.0.3.min.js"></script>
+            <!-- Include all compiled plugins (below), or include individual files as needed -->
+            <script type="text/javascript" src="static/external/bootstrap-3.0.3/js/bootstrap.min.js"></script>
+            <script type="text/javascript" src="static/external/flot-0.8.2/jquery.flot.js"></script>
+            <script type="text/javascript" src="static/external/flot-0.8.2/jquery.flot.selection.js"></script>
+            <script type="text/javascript" src="static/raspibrew_bootstrap.js"></script>
+        </body>
+    </html>

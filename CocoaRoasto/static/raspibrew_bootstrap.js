@@ -21,7 +21,7 @@
 
 //declare globals
 var timeElapsed, tempDataArray, heatDataArray, setpointDataArray, dutyCycle, options_temp, options_heat, plot, gaugeDisplay, newGaugeDisplay;
-var capture_on = 1;
+var capture_on = 0;
 var numTempSensors, tempUnits, temp, setpoint;
 
 // Column highlighting
@@ -42,6 +42,29 @@ $('input[name=profilelock]').on('click', function() {
 // MAFS!!
 // Calculate the profile table
 $('input.profile').on('change paste keyup', function() {
+    validateProfile();
+});
+
+
+// Highilight a row
+$('.selectRow').click(function() {
+	$('.selectRow').removeClass("row-highlight");
+ // removes all the highlights from the table
+	$(this).addClass('row-highlight');
+});
+
+(function ($) {
+  $.fn.serializeDisabled = function () {
+    var obj = {};
+
+    $(':disabled[name]', this).each(function () { 
+        obj[this.name] = $(this).val(); 
+    });
+    return $.param(obj);
+  }
+})(jQuery);
+
+function validateProfile(){
     var tableValues = new Array();
     var lockedCol = $('#profileTable').find('input[disabled=disabled]').closest('td').index() - 1;
     var myRow = $(this).closest('tr').index() - 1;
@@ -64,6 +87,7 @@ $('input.profile').on('change paste keyup', function() {
     tableValues.shift();
     tableValues.shift();
     
+    var submitReady = true;
     for(var i = 1; i < tableValues.length; i++){
         var oldTemp = tableValues[i-1][2];
         // Only calculate if there's an old temperature
@@ -75,6 +99,7 @@ $('input.profile').on('change paste keyup', function() {
                     full += 1;
                 }
                 else{
+                    submitReady = false;
                     empty = j;
                 }
             }
@@ -107,13 +132,54 @@ $('input.profile').on('change paste keyup', function() {
             input.value = tableValues[Math.floor((count+2)/3)][(count+2) % 3];
         }
     });
-});
 
-$('.selectRow').click(function() {
-	$('.selectRow').removeClass("row-highlight");
- // removes all the highlights from the table
-	$(this).addClass('row-highlight');
-});
+    if(submitReady){
+        $('#saveprofile').prop('disabled',false);
+    }
+    else{
+        $('#saveprofile').prop('disabled',true);
+    }
+}
+
+// Callback for profile load button
+function loadProfile(){
+    var profile = fr.result
+    vals = jQuery.parseJSON(profile);
+    $('#ambientFinaltemp').val(vals["ambient"]["finaltemp"]);
+    $('#dryingRamp').val(vals["drying"]["ramp"]);
+    $('#dryingTime').val(vals["drying"]["time"]);
+    $('#dryingFinaltemp').val(vals["drying"]["finaltemp"]);
+    $('#developmentRamp').val(vals["development"]["ramp"]);
+    $('#developmentTime').val(vals["development"]["time"]);
+    $('#developmentFinaltemp').val(vals["development"]["finaltemp"]);
+    $('#finishRamp').val(vals["finish"]["ramp"]);
+    $('#finishTime').val(vals["finish"]["time"]);
+    $('#finishFinaltemp').val(vals["finish"]["finaltemp"]);
+    // validate that it's a good profile.
+    validateProfile();
+    // Likely do some modifications here so load it back in
+    vals["ambient"]["finaltemp"] = $('#ambientFinaltemp').val();
+    vals["drying"]["ramp"] = $('#dryingRamp').val();
+    vals["drying"]["time"] = $('#dryingTime').val();
+    vals["drying"]["finaltemp"] = $('#dryingFinaltemp').val();
+    vals["development"]["ramp"] = $('#developmentRamp').val();
+    vals["development"]["time"] = $('#developmentTime').val();
+    vals["development"]["finaltemp"] = $('#developmentFinaltemp').val();
+    vals["finish"]["ramp"] = $('#finishRamp').val();
+    vals["finish"]["time"]= $('#finishTime').val();
+    vals["finish"]["finaltemp"] = $('#finishFinaltemp').val();
+
+    // upload 
+    jQuery.ajax({
+        type: 'POST',
+        url : "/postprofile",
+        data: JSON.stringify(vals),
+        contentType: 'application/json',
+        dataType: 'json',
+        success:function(data){
+        },
+    });
+}
 
 function findLS(selected_start, selected_end, in_pointArray) {
 
@@ -301,92 +367,6 @@ function waitForMsg() {
 			}
 		}
 	});
-	if (numTempSensors >= 2) {
-		jQuery.ajax({
-			type : "GET",
-			url : "/getstatus/2",
-			dataType : "json",
-			async : true,
-			cache : false,
-			timeout : 50000,
-
-			success : function(data) {
-
-				jQuery('#dutyCycleUnits2').html("%");
-
-				if (data.tempUnits == "F") {
-					jQuery('#tempResponseUnits2').html("&#176F");
-					jQuery('#setpointResponseUnits2').html("&#176F");
-					jQuery('#setpointInputUnits2').html("&#176F");
-				} else {
-					jQuery('#tempResponseUnits2').html("&#176C");
-					jQuery('#setpointResponseUnits2').html("&#176C");
-					jQuery('#setpointInputUnits2').html("&#176C");
-				}
-
-				jQuery('#tempResponse2').html(data.temp);
-				jQuery('#modeResponse2').html(data.mode);
-				jQuery('#setpointResponse2').html(data.set_point);
-				jQuery('#dutycycleResponse2').html(data.gasOutput.toFixed(2));
-				jQuery('#cycletimeResponse2').html(data.sampleTime);
-				jQuery('#k_paramResponse2').html(data.k_param);
-				jQuery('#i_paramResponse2').html(data.i_param);
-				jQuery('#d_paramResponse2').html(data.d_param);
-				jQuery('#d_paramResponse2').html(data.d_param);
-
-				storeData(1, data);
-
-				if (capture_on == 1) {
-					if ($('#secondRow').hasClass('row-highlight') == true) {
-						plotData(1, data);
-					}
-				}
-			}
-		});
-	}
-	if (numTempSensors >= 3) {
-		jQuery.ajax({
-			type : "GET",
-			url : "/getstatus/3",
-			dataType : "json",
-			async : true,
-			cache : false,
-			timeout : 50000,
-
-			success : function(data) {
-
-				jQuery('#dutyCycleUnits3').html("%");
-
-				if (data.tempUnits == "F") {
-					jQuery('#tempResponseUnits3').html("&#176F");
-					jQuery('#setpointResponseUnits3').html("&#176F");
-					jQuery('#setpointInputUnits3').html("&#176F");
-				} else {
-					jQuery('#tempResponseUnits3').html("&#176C");
-					jQuery('#setpointResponseUnits3').html("&#176C");
-					jQuery('#setpointInputUnits3').html("&#176C");
-				}
-
-				jQuery('#tempResponse3').html(data.temp);
-				jQuery('#modeResponse3').html(data.mode);
-				jQuery('#setpointResponse3').html(data.set_point);
-				jQuery('#dutycycleResponse3').html(data.gasOutput.toFixed(2));
-				jQuery('#cycletimeResponse3').html(data.sampleTime);
-				jQuery('#k_paramResponse3').html(data.k_param);
-				jQuery('#i_paramResponse3').html(data.i_param);
-				jQuery('#d_paramResponse3').html(data.d_param);
-
-				storeData(2, data);
-
-				if (capture_on == 1) {
-					if ($('#thirdRow').hasClass('row-highlight') == true) {
-						plotData(2, data);
-					}
-				}
-			}
-		});
-	}
-
 };
 
 jQuery(document).ready(function() {
@@ -403,6 +383,15 @@ jQuery(document).ready(function() {
             $mytd.addClass('col-highlight');
             $mytd.find('input[type=number]').each(function() { $(this).attr("disabled","disabled"); });
         }
+    });
+
+    // Also lock the profile save button
+    // FEATURE: check to make sure the table is populated. We may want to upload profiles from a file
+    $('#saveprofile').prop('disabled',true);
+
+    // Deal with our load profile
+    $('input:file[id=loadprofile]').on("change", function() {
+        $('button:submit[id=uploadprofile]').prop('disabled', !$(this).val()); 
     });
 
     
@@ -456,17 +445,26 @@ jQuery(document).ready(function() {
 
 	});
 
-	jQuery('#roastingProfileForm').submit(function() {
+    // Save a roasting profile
+	jQuery('#roastingProfileForm').submit(function(e) {
+        e.preventDefault();
+/*
 		formdata = jQuery(this).serialize();
-        // See if all of our values are filled in
-        var pairs = formdata.split('&');
-        pairs.some(function(pair){
-            val = pair.split('=')[1]; 
-            if (val == ''){
-                window.alert('All profile values are required');
-                return true;
-            } 
+        formdata = formdata + '&' + jQuery(this).serializeDisabled();
+        jQuery.ajax({
+            type : "POST",
+            url : "/postprofile",
+            data : formdata,
+            success : function(data) {
+            },
         });
+*/
+
+		return false;
+	});
+	jQuery('#saveprofile').on('click',function() {
+		formdata = jQuery(this).serialize();
+        formdata = formdata + '&' + jQuery(this).serializeDisabled();
         jQuery.ajax({
             type : "POST",
             url : "/postprofile",
@@ -477,6 +475,15 @@ jQuery(document).ready(function() {
 
 		return false;
 	});
+
+    // Upload a roasting rofile
+    jQuery('#uploadprofile').on('click', function(){
+        var f = $('input[type=file]')[0].files[0];
+        fr = new FileReader();
+        fr.onload = loadProfile;
+        fr.readAsText(f);
+    });
+
 
 	jQuery('#controlPanelForm').submit(function() {
 
