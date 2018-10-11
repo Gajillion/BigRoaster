@@ -23,7 +23,7 @@
 
 import pprint
 from inspect import getmembers
-import time, random, serial, os
+import time, random, os
 import sys
 from flask import Flask, render_template, request, jsonify
 import xml.etree.ElementTree as ET

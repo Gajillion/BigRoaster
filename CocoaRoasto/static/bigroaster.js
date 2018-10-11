@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2012-2014 Stephen P. Smith
+// Copyright (c) 2017-2018 Mark Juric
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files
@@ -19,10 +20,15 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 // IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-//declare globals
-var timeElapsed, tempDataArray, heatDataArray, setpointDataArray, dutyCycle, options_temp, options_heat, plot, gaugeDisplay, newGaugeDisplay;
+var timeElapsed, tempDataArray, heatDataArray, setpointDataArray, dutyCycle, options_temp, options_heat, plot;
 var capture_on = 0;
 var numTempSensors, tempUnits, temp, setpoint;
+// Roaster animation vars
+var elem, output, tilt; // DOM objects
+var rHeight, rx, rRect, rCircle, rCross, rCrosses;
+var rPercentFull;
+var two;
+var rCurrentTilt;
 
 // Column highlighting
 $('input[name=profilelock]').on('click', function() {
@@ -32,7 +38,7 @@ $('input[name=profilelock]').on('click', function() {
     $currentTable.find('input[type=number]').removeAttr("disabled");
     $currentTable.find('tr').each(function() {
         if($(this).hasClass("lockable")){
-            var $mytd = $(this).find('td').eq(index-1)
+            var $mytd = $(this).find('td').eq(index-1);
             $mytd.addClass('col-highlight');
             $mytd.find('input[type=number]').each(function() { $(this).attr("disabled","disabled"); });
         }
@@ -354,8 +360,6 @@ function waitForMsg() {
 			jQuery('#i_paramResponse').html(data.i_param);
 			jQuery('#d_paramResponse').html(data.d_param);
 
-			//gaugeDisplay.setValue(parseFloat(data.temp));
-
 			storeData(0, data);
 
 			if (capture_on == 1) {
@@ -369,7 +373,93 @@ function waitForMsg() {
 	});
 };
 
+
+function drawProbes(two, total_height, probes) {
+  var width = 2;
+  var height =  total_height/2/2;
+  var p = [4];
+  var group = two.makeGroup();
+  if(probes[0]){
+    p[0] = two.makeRectangle(0, height/2, width, height);
+    p[0].stroke = 'rgb(0, 191, 168)';
+    group.add(p[0]);
+  }
+  if(probes[1]){
+    p[1] = two.makeRectangle(0, -height/2, width, height);
+    p[1].stroke = 'rgb(240, 91, 0)';
+    group.add(p[1]);
+  }
+  if(probes[2]){
+    p[2] = two.makeRectangle(-height/2, 0, height, width);
+    p[2].stroke = 'rgb(120, 191, 225)';
+    group.add(p[2]);
+  }
+  if(probes[3]){
+    p[3] = two.makeRectangle(height/2, 0, height, width);
+    p[3].stroke = 'rgb(220, 291, 225)';
+    group.add(p[3]);
+  }
+  return group;
+}
+
 jQuery(document).ready(function() {
+    // Roaster animation setup
+    rHeight = 200;
+    rPercentFull = 50;
+    rCurrentTilt = 0;
+
+    // Find our DOM objects
+    elem = document.getElementById('draw-animation');
+    rx = elem.offsetWidth/2;
+    ry = rHeight / 2; 
+    //output = document.getElementById('output');
+    tilt = document.getElementById("spillangle").value;
+
+    // Create our Two.js object
+    two = new Two({
+      autostart: true,
+      width: rx * 2,
+      height: ry * 2,
+    }).appendTo(elem);
+
+    rRect = two.makeRectangle(rx, ry, rHeight , rHeight);
+    rCircle = two.makeCircle(rx, ry, rHeight/2);
+    rCircle.noStroke().fill = 'chocolate';
+    var rContainer = two.makeGroup(rCircle);
+
+    rCross = drawProbes(two, rHeight, [true,true,true,true]);
+    rCross.linewidth = 5;
+    rCross.translation.set(rx, ry);
+    rCrosses = two.makeGroup(rCross);
+    rContainer.mask = rRect;
+
+    // Bind our update trigger
+    two.bind('update', function(frameCount) {
+      var tick = 100;
+      var rot = frameCount / tick
+      var rPercentFull = document.getElementById("fullpercent").value;
+      var pfull_mult = (rHeight * (rPercentFull * 0.01));
+      var qturn = 90 * Math.PI /180;
+      tilt = document.getElementById("spillangle").value;
+
+      rCross.rotation = rot+qturn;
+      if(Math.round(rCurrentTilt*100)/100 != Math.round(tilt*100)/100){
+        rRect.rotation = rCurrentTilt+qturn;
+        rRect.translation.x = (rHeight - pfull_mult) * Math.cos(rCurrentTilt+qturn) + rx;
+        rRect.translation.y = (rHeight - pfull_mult) * Math.sin(rCurrentTilt+qturn) + ry;
+        if(rCurrentTilt < tilt){
+          rCurrentTilt += 1/tick;
+        }
+        else {
+          rCurrentTilt -= 1/tick;
+        }
+      }
+      else{
+        rRect.translation.x = (rHeight - pfull_mult) * Math.cos(rRect.rotation) + rx;
+        rRect.translation.y = (rHeight - pfull_mult) * Math.sin(rRect.rotation) + ry;
+      }
+      //output.innerHTML = "qturn: " + qturn + "<p>framecount: " + frameCount + "<p>rot: " + rot + "<p> tilt: " + tilt + "<p>rCurrentTilt: " + rCurrentTilt + "<p>pfull_mult: " + pfull_mult + "<p>((rHeight*2) - pfull_mult): " +  ((rHeight*2) - pfull_mult);
+    });
 
     // one-time on load, lock the time column
     jQuery('#timelock').attr("checked",true);
@@ -531,27 +621,6 @@ jQuery(document).ready(function() {
 		return false;
 	});
 
-	//draw gauge
-	//var options_gauge = {
-	//	majorTickLabel : true,
-	//	value : 60,
-	//	label : 'Temp',
-	//	unitsLabel : '' + String.fromCharCode(186),
-	//	min : 60,
-	//	max : 220,
-	//	majorTicks : 9,
-	//	minorTicks : 9, // small ticks inside each major tick
-	//	greenFrom : 60,
-	//	greenTo : 95,
-	//	yellowFrom : 95,
-	//	yellowTo : 150,
-	//	redFrom : 150,
-	//	redTo : 200
-	//};
-
-	//gaugeDisplay = new Gauge(document.getElementById('tempGauge'), options_gauge);
-
-	// line plot Settings
 	i = 0;
 	tempDataArray = [[], [], []];
 	heatDataArray = [[], [], []];
