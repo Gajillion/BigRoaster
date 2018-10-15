@@ -41,7 +41,6 @@ roasterStatusQ = []
 DEBUG = 0
 
 app = Flask(__name__, template_folder='templates')
-#url_for('static', filename='raspibrew.css')
 
 #Parameters that are used in the temperature control process
 class param:
@@ -138,7 +137,7 @@ def postparams(sensorNum=None):
         
     return 'OK'
     
-#get status from RasPiBrew using firefox web browser (selectable temp sensor)
+#get status from from roaster
 @app.route('/getstatus/<roasterNum>') #only GET
 def getstatus(roasterNum=None):          
     global roasterStatusQ
