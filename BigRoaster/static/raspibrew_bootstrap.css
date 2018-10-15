@@ -1,3 +1,5 @@
+.col-highlight{ background-color: #a11; }
+
 .btn-primary:active, .btn-primary.active {
 	background-color: #0A386E;
 }

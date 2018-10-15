@@ -1,4 +1,6 @@
+#!/usr/bin/python
 #
+# Copyright (c) 2017-2018 Mark Juric
 # Copyright (c) 2012-2015 Stephen P. Smith
 #
 # Permission is hereby granted, free of charge, to any person obtaining 
@@ -20,7 +22,8 @@
 # IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import pprint
-import time, random, serial, os
+from inspect import getmembers
+import time, random, os
 import sys
 from flask import Flask, render_template, request, jsonify
 import xml.etree.ElementTree as ET
@@ -64,6 +67,14 @@ class param:
         "d_param" : 0.001             
     }
                       
+class profile:
+    roast = {
+        "ambient" : { "ramp": '', "finaltemp": 70, "time": '' },
+        "drying" : { "ramp": '', "finaltemp": '', "time": '' },
+        "development" : { "ramp": '', "finaltemp": '', "time": '' },
+        "finish" : { "ramp": '', "finaltemp": 267, "time": '' },
+    }
+
 # main web page    
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -75,8 +86,38 @@ def index():
                                 k_param = param.status["k_param"], i_param = param.status["i_param"], \
                                 d_param = param.status["d_param"], numTempSensors = param.status["numTempSensors"], \
                                 tempSensors = param.status["tempSensors"], gasValve = param.status["gasValve"],\
-                                test_array = ['X','Y','Z'])
-        
+                                ambient_finaltemp = profile.roast["ambient"]["finaltemp"],\
+                                drying_ramp = profile.roast["drying"]["ramp"],\
+                                drying_finaltemp = profile.roast["drying"]["finaltemp"],\
+                                drying_time = profile.roast["drying"]["time"],\
+                                development_ramp = profile.roast["development"]["ramp"],\
+                                development_finaltemp = profile.roast["development"]["finaltemp"],\
+                                development_time = profile.roast["development"]["time"],\
+                                finish_ramp = profile.roast["finish"]["ramp"],\
+                                finish_finaltemp = profile.roast["finish"]["finaltemp"],\
+                                finish_time = profile.roast["finish"]["time"])
+    else:
+        return 'OK'
+
+#post roasting profiles
+@app.route('/postprofile', methods=['POST'])
+def postprofile():
+    if request.json is not None:
+        profile.roast = request.json
+
+    for val in request.form:
+        print val, " ", request.form[val]
+
+    print "ME SHARTS!"
+    return 'OK'
+
+# check-in with the temperature probe
+@app.route('/postsensors', methods=['POST'])
+def postsensors():
+    content = request.get_json()
+    print (content)
+    return 'JSON posted'
+
 #post params (selectable temp sensor number)    
 @app.route('/postparams/<sensorNum>', methods=['POST'])
 def postparams(sensorNum=None):
