@@ -22,7 +22,6 @@
 # IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import pprint
-from inspect import getmembers
 import time, random, os
 import sys
 from flask import Flask, render_template, request, jsonify
@@ -63,7 +62,9 @@ class param:
       #  "d_param" : 4             
         "k_param" : 1.2,
         "i_param" : 1,
-        "d_param" : 0.001             
+        "d_param" : 0.001,
+        "sampleRate" : 500,             
+        "checkInRate" : 20,             
     }
                       
 class profile:
@@ -85,6 +86,7 @@ def index():
                                 k_param = param.status["k_param"], i_param = param.status["i_param"], \
                                 d_param = param.status["d_param"], numTempSensors = param.status["numTempSensors"], \
                                 tempSensors = param.status["tempSensors"], gasValve = param.status["gasValve"],\
+                                sampleRate = param.status["sampleRate"], checkInRate = param.status["checkInRate"],\
                                 ambient_finaltemp = profile.roast["ambient"]["finaltemp"],\
                                 drying_ramp = profile.roast["drying"]["ramp"],\
                                 drying_finaltemp = profile.roast["drying"]["finaltemp"],\
@@ -109,6 +111,11 @@ def postprofile():
 
     print "ME SHARTS!"
     return 'OK'
+
+# make sure our temp board is doing what we want
+@app.route('/checkin', methods=['GET'])
+def checkin():
+    return jsonify({"sampleRate": str(param.status["sampleRate"]), "checkInRate": str(param.status["checkInRate"])})
 
 # check-in with the temperature probe
 @app.route('/postsensors', methods=['POST'])
@@ -165,13 +172,6 @@ def getTempProc(conn, myTempSensor):
         num = myTempSensor.readTempC()
         elapsed = "%.2f" % (time.time() - t)
         conn.send([num, myTempSensor.getTempSensorId(), elapsed])
-        
-#Get time heating element is on and off during a set cycle time
-def getonofftime(sampleTime, gasOutput):
-    duty = gasOutput/100.0
-    on_time = sampleTime*(duty)
-    off_time = sampleTime*(1.0-duty)   
-    return [on_time, off_time]
         
 # Stand Alone Heat Process using GPIO
 def heatProcGPIO(conn, sampleTime, gasOutput, myGasServo):
