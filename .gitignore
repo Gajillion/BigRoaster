@@ -2,3 +2,4 @@ roasting0.csv
 access.log
 *.pyc
 *.swp
+.DS_Store

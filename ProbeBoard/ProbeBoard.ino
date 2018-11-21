@@ -166,17 +166,25 @@ void loop() {
     fZg = lis.z * alpha + (fZg * (1.0 - alpha));
 
     //Roll & Pitch Equations
-    roll  = (atan2(-fYg, fZg) * 180.0) / M_PI;
-    // We don't need roll if we're mounted correectly
+    // We don't need pitch if we're mounted correctly
     // pitch = (atan2(fXg, sqrt(fYg*fYg + fZg*fZg))*180.0)/M_PI;
+    
+    roll  = (atan2(-fYg, fZg) * 180.0) / M_PI;
+    if(roll < 0){
+      roll += 360;
+    }
 
+    // And deliver in radians
+    roll *= (M_PI/180.0);
+    // round off to the nearest hundredths of a radian
+    roll *= 100;
+    roll = round(roll);
+    roll /= 100;
+    
     position["rotation"] = roll;
     JsonArray& probes = root.createNestedArray("probes");
 
     // Now, add in our thermocouples
- 
-    Serial.println("t is " + String(t));
-
     for (int i = 0; i < NUM_TCS; i++){
       if (tcs[i] != NULL) {
         double c = tcs[i]->readCelsius();
