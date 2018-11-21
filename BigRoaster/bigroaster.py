@@ -15,16 +15,15 @@
 # in all copies or substantial portions of the Software.
 
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS 
-# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+# or impLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
 # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, 
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR 
 # IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-import pprint
 import time, random, os
 import sys
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, json
 import xml.etree.ElementTree as ET
 import Roaster
 from multiprocessing import Queue, Pipe, Process, current_process
@@ -34,9 +33,14 @@ from pid import pidpy as PIDController
 import logging
 from logging.handlers import RotatingFileHandler
 
-global parent_conn
+global paramConn    # pipe between tempControlProc and web server for passing POST'd params
+global myRoasterObj
+
+
 roastTime = 0
-roasterStatusQ = []
+posted = False
+statusQ = None      # Queue to pass temp readings and settings between browser and us
+tempQueue = Queue(2)    # Queue to pass temp sensor data between tempControlProc and us
 DEBUG = 0
 
 app = Flask(__name__, template_folder='templates')
@@ -46,16 +50,13 @@ class param:
     status = {
         "tempSensors" : [],
         "gasValve" : [],
-        "numTempSensors" : 0,
         "temp" : "0",
         "tempUnits" : "F",
         "elapsed" : "0",
         "mode" : "off",
         "sampleTime" : 2.0,
         "gasOutput" : 0.0,
-        "boil_gasOutput" : 60,
         "set_point" : 0.0,
-        "boil_manage_temp" : 200,
         "num_pnts_smooth" : 5,
       #  "k_param" : 44,
       #  "i_param" : 165,
@@ -63,16 +64,35 @@ class param:
         "k_param" : 1.2,
         "i_param" : 1,
         "d_param" : 0.001,
-        "sampleRate" : 500,             
+        "sampleRate" : 50,             
         "checkInRate" : 20,             
+        "roasterRotation" : 0,             
+        "roasterTilt" : 0,             
+        "roasterFullness" : 50,             
     }
-                      
-class profile:
     roast = {
         "ambient" : { "ramp": '', "finaltemp": 70, "time": '' },
         "drying" : { "ramp": '', "finaltemp": '', "time": '' },
         "development" : { "ramp": '', "finaltemp": '', "time": '' },
         "finish" : { "ramp": '', "finaltemp": 267, "time": '' },
+    }
+    config = {
+        "tempUnits" : "F",
+        "template": '',
+        "rootDir": '',
+        "roasterId": -1,
+        "servoId": -1,
+        "servoDriver": '',
+        "servoDelay": 0.1,
+        "servoStepPin": -1,
+        "servoDirPin": -1,
+        "servoMS1Pin": -1,
+        "servoMS2Pin": -1,
+        "servoHomePin": -1,
+        "servoSteps": -1,
+        "servoStepsPer": -1,
+        "valveMaxTurns": -1,
+        "valveSafeLow": -1,
     }
 
 # main web page    
@@ -84,19 +104,19 @@ def index():
         return render_template(template_name, mode = param.status["mode"], set_point = param.status["set_point"], \
                                 gasOutput = param.status["gasOutput"], sampleTime = param.status["sampleTime"], \
                                 k_param = param.status["k_param"], i_param = param.status["i_param"], \
-                                d_param = param.status["d_param"], numTempSensors = param.status["numTempSensors"], \
+                                d_param = param.status["d_param"], \
                                 tempSensors = param.status["tempSensors"], gasValve = param.status["gasValve"],\
                                 sampleRate = param.status["sampleRate"], checkInRate = param.status["checkInRate"],\
-                                ambient_finaltemp = profile.roast["ambient"]["finaltemp"],\
-                                drying_ramp = profile.roast["drying"]["ramp"],\
-                                drying_finaltemp = profile.roast["drying"]["finaltemp"],\
-                                drying_time = profile.roast["drying"]["time"],\
-                                development_ramp = profile.roast["development"]["ramp"],\
-                                development_finaltemp = profile.roast["development"]["finaltemp"],\
-                                development_time = profile.roast["development"]["time"],\
-                                finish_ramp = profile.roast["finish"]["ramp"],\
-                                finish_finaltemp = profile.roast["finish"]["finaltemp"],\
-                                finish_time = profile.roast["finish"]["time"])
+                                ambient_finaltemp = param.roast["ambient"]["finaltemp"],\
+                                drying_ramp = param.roast["drying"]["ramp"],\
+                                drying_finaltemp = param.roast["drying"]["finaltemp"],\
+                                drying_time = param.roast["drying"]["time"],\
+                                development_ramp = param.roast["development"]["ramp"],\
+                                development_finaltemp = param.roast["development"]["finaltemp"],\
+                                development_time = param.roast["development"]["time"],\
+                                finish_ramp = param.roast["finish"]["ramp"],\
+                                finish_finaltemp = param.roast["finish"]["finaltemp"],\
+                                finish_time = param.roast["finish"]["time"])
     else:
         return 'OK'
 
@@ -104,7 +124,7 @@ def index():
 @app.route('/postprofile', methods=['POST'])
 def postprofile():
     if request.json is not None:
-        profile.roast = request.json
+        param.roast = request.json
 
     for val in request.form:
         print val, " ", request.form[val]
@@ -120,18 +140,28 @@ def checkin():
 # check-in with the temperature probe
 @app.route('/postsensors', methods=['POST'])
 def postsensors():
+    global posted
+
     content = request.get_json()
-    print (content)
+    if not posted:
+        initialize(content)
+        posted = True
+
+    if tempQueue.full():
+        print "Queue full. Scrapping data"
+        tempQueue.get()
+    tempQueue.put(content)
+    print "Posting to tempQueue: ", content, " and now queue length is ", tempQueue.qsize()
     return 'JSON posted'
 
 #post params (selectable temp sensor number)    
 @app.route('/postparams/<sensorNum>', methods=['POST'])
 def postparams(sensorNum=None):
+    global paramConn
     param.status["mode"] = request.form["mode"] 
     param.status["set_point"] = float(request.form["setpoint"])
     param.status["gasOutput"] = float(request.form["dutycycle"]) #is boil duty cycle if mode == "boil"
     param.status["sampleTime"] = float(request.form["cycletime"])
-    param.status["boil_manage_temp"] = float(request.form.get("boilManageTemp", param.status["boil_manage_temp"])) 
     param.status["num_pnts_smooth"] = int(request.form.get("numPntsSmooth", param.status["num_pnts_smooth"]))
     param.status["k_param"] = float(request.form["k"])
     param.status["i_param"] = float(request.form["i"])
@@ -140,39 +170,73 @@ def postparams(sensorNum=None):
             
     #send to main temp control process 
     #if did not receive variable key value in POST, the param class default is used
-    parent_conn.send(param.status)
+    paramConn.send(param.status)
         
     return 'OK'
     
 #get status from from roaster
-@app.route('/getstatus/<roasterNum>') #only GET
-def getstatus(roasterNum=None):          
-    global roasterStatusQ
+@app.route('/getstatus') #only GET
+def getstatus(roasterNum=1):          
+    global statusQ
     # blocking receive - current status
-    roasterN = int(roasterNum)
-    if roasterN > len(roasterStatusQ):
-        print("Sensor doesn't exist (GET)")
-        param.status["temp"] = "-999"
-    else:
-        param.status = roasterStatusQ[roasterN-1].get()
+    print "param.status: ", param.status
+    try:
+        param.status = statusQ.get(timeout=param.status["sampleRate"]/1000.0)
+    except:
+        pass
 
     return jsonify(**param.status)
+
+def initialize(sensorPost):
+    global statusQ
+    global paramConn
+    # We've never checked in before. Do some work
+    ## Is it possible to change this on the fly? Do we care?
+    numSensors = len(sensorPost["probes"])
+    param.status["tempSensors"] = []
+
+    param.status["tempUnits"] = param.config["tempUnits"]
+
+    # Look for roasters
+    myRoasterObj = Roaster.Roaster(param.config["roasterId"])
+    for i in range(numSensors):
+        tempSensorId = sensorPost["probes"][i]["number"]
+        myRoasterObj.addTempSensor(tempSensorId,str(tempSensorId),"MAX31855","hardware")
+        #myRoasterObj.addTempSensor(tempSensorId)
+        param.status["tempSensors"].append([tempSensorId,str(tempSensorId),0])
+
+    # grab our gas servo
+    servoId     = param.config["servoId"]
+    driver      = param.config["servoDriver"]
+    delay       = param.config["servoDelay"]
+    step        = param.config["servoStepPin"]
+    direction   = param.config["servoDirPin"]
+    ms1         = param.config["servoMS1Pin"]
+    ms2         = param.config["servoMS2Pin"]
+    home        = param.config["servoHomePin"]
+    steps       = param.config["servoSteps"]
+    stepsPer    = param.config["servoStepsPer"]
+
+    # get our valve info
+    maxTurns = param.config["valveMaxTurns"]
+    safeLow  = param.config["valveSafeLow"]
+
+    param.status["gasValve"] = [servoId,safeLow,0]
+
+    myRoasterObj.addGasServo(servoId,driver,delay,step,direction,ms1,ms2,home,maxTurns,safeLow,steps,stepsPer)
+    myGasServo = myRoasterObj.getGasServo()
+    
+    statusQ = Queue(2) # blocking queue
+    paramConn, childParamConn = Pipe()
+    p = Process(name = "tempControlProc", target=tempControlProc, args=(tempQueue, myRoasterObj, param.status, childParamConn))
+    p.start()
+
+    myGasServo.home()
+
 
 def getRoastTime():
     return (time.time() - roastTime)    
        
-# Stand Alone Get Temperature Process               
-def getTempProc(conn, myTempSensor):
-    p = current_process()
-    print('Starting:', p.name, p.pid)
-    
-    while (True):
-        t = time.time()
-        time.sleep(.5) #.1+~.83 = ~1.33 seconds
-        num = myTempSensor.readTempC()
-        elapsed = "%.2f" % (time.time() - t)
-        conn.send([num, myTempSensor.getTempSensorId(), elapsed])
-        
 # Stand Alone Heat Process using GPIO
 def heatProcGPIO(conn, sampleTime, gasOutput, myGasServo):
     p = current_process()
@@ -186,69 +250,51 @@ def heatProcGPIO(conn, sampleTime, gasOutput, myGasServo):
 
 def unPackParamInitAndPost(paramStatus):
     #temp = paramStatus["temp"]
-    #tempUnits = paramStatus["tempUnits"]
+    tempUnits = paramStatus["tempUnits"]
     #elapsed = paramStatus["elapsed"]
     mode = paramStatus["mode"]
     sampleTime = paramStatus["sampleTime"]
     gasOutput = paramStatus["gasOutput"]
-    boil_gasOutput = paramStatus["boil_gasOutput"]
     set_point = paramStatus["set_point"]
-    boil_manage_temp = paramStatus["boil_manage_temp"]
     num_pnts_smooth = paramStatus["num_pnts_smooth"]
     k_param = paramStatus["k_param"]
     i_param = paramStatus["i_param"]
     d_param = paramStatus["d_param"]
 
-    return mode, sampleTime, gasOutput, boil_gasOutput, set_point, boil_manage_temp, num_pnts_smooth, \
+    return tempUnits, mode, sampleTime, gasOutput,  set_point, num_pnts_smooth, \
            k_param, i_param, d_param
 
-def packParamGet(numTempSensors, myTempSensorNum, temp, tempUnits, elapsed, mode, sampleTime, gasOutput, boil_gasOutput, set_point, \
-                                 boil_manage_temp, num_pnts_smooth, k_param, i_param, d_param, tempSensors, gasValve):
+def packParamGet(temp, tempUnits, elapsed, mode, sampleTime, gasOutput,  set_point, \
+                                 num_pnts_smooth, k_param, i_param, d_param, tempSensors, gasValve, rotation):
     
-    param.status["numTempSensors"] = numTempSensors
-    param.status["myTempSensorNum"] = myTempSensorNum
     param.status["temp"] = temp
     param.status["tempUnits"] = tempUnits
     param.status["elapsed"] = elapsed
     param.status["mode"] = mode
     param.status["sampleTime"] = sampleTime
     param.status["gasOutput"] = gasOutput
-    param.status["boil_gasOutput"] = boil_gasOutput
     param.status["set_point"] = set_point
-    param.status["boil_manage_temp"] = boil_manage_temp
     param.status["num_pnts_smooth"] = num_pnts_smooth
     param.status["k_param"] = k_param
     param.status["i_param"] = i_param
     param.status["d_param"] = d_param
     param.status["tempSensors"] = tempSensors
     param.status["gasValve"] = gasValve
+    param.status["roasterRotation"] = rotation
 
     return param.status
 
 
 # Main Temperature Control Process
-def tempControlProc(myRoaster, paramStatus, conn):
-    parentTemps = []
+def tempControlProc(tempQ, myRoaster, paramStatus, childParamConn):
     oldMode = ''
 
-    mode, sampleTime, gasOutput, boil_gasOutput, set_point, boil_manage_temp, num_pnts_smooth, \
+    tempUnits, mode, sampleTime, gasOutput,  set_point, num_pnts_smooth, \
     k_param, i_param, d_param = unPackParamInitAndPost(paramStatus)
     oldMode = mode
 
     p = current_process()
     print('Starting:', p.name, p.pid)
-
-    tempSensors = myRoaster.getTempSensors()
-    numTempSensors = len(tempSensors)
-    for tempSensor in tempSensors:
-        parentTemp, c = Pipe()
-        tempSensor.addTempPipe(parentTemp)
-    
-        # Start Get Temperature Process        
-        ptemp = Process(name = "getTempProc", target=getTempProc, args=(c, tempSensor))
-        ptemp.daemon = True
-        print ('Starting:', tempSensor.getTempSensorName())
-        ptemp.start()
 
     # Pipe to communicate with "Heat Process"
     parentHeat, c = Pipe()
@@ -257,8 +303,6 @@ def tempControlProc(myRoaster, paramStatus, conn):
     pheat = Process(name = "heatProcGPIO", target=heatProcGPIO, args=(c, sampleTime, gasOutput, myRoaster.getGasServo()))
     pheat.daemon = True
     pheat.start()
-
-    tempUnits = xml_root.find('Temp_Units').text.strip()
 
     # Get our PID ready
     readyPIDcalc = False
@@ -275,11 +319,27 @@ def tempControlProc(myRoaster, paramStatus, conn):
         tempSensorsParam = []
         gasServoParam = []
  
-        for tempSensor in tempSensors:
-            parentTemp = tempSensor.getTempPipe()
-            while parentTemp.poll(): # Poll Get Temperature Process Pipe
-                temp_C, tempSensorNum, elapsed = parentTemp.recv() # non blocking receive from Get Temperature Process
+        while not tempQ.empty():
+            try:
+                sensorInfo = tempQ.get()
+            except e:
+                print "tempQ was empty even when we said it wasn't. WTF."
 
+            # This loop is not done. In here is where we have to figure out
+            # which probe to pay attention to.
+    
+            # Rotation applies to probe 1. 
+            # Face down: 180
+            # Face up: 0
+            # Battery side (esp8266 up): 90
+            # Battery side (esp8266 down): -90
+            # Back side (esp8266 up): -90
+            # Back side (esp8266 down): 90
+            rotation = sensorInfo["position"]["rotation"]
+            for sensor in sensorInfo["probes"]:
+                temp_C = sensor["temp"]
+                elapsed = sensor["elapsed"] / 1000.0
+                tempSensorNum = sensor["number"]
                 if temp_C == -99:
                     print("Bad Temp Reading - retry")
                     continue
@@ -292,70 +352,68 @@ def tempControlProc(myRoaster, paramStatus, conn):
                 temp_str = "%3.2f" % temp
                 
                 readytemp = True
-                
-            if readytemp == True:
-                if mode == "auto":
-                    tempMovingAverageList.append({"temp":temp,"timestamp":time.time()})
+                tempSensorsParam.append([tempSensorNum,tempSensorNum,temp_str])
+            
+        if readytemp == True:
+            if mode == "auto":
+                tempMovingAverageList.append({"temp":temp,"timestamp":time.time()})
 
-                    # smooth data
-                    tempMovingAverage = 0.0 # moving avg init
-                    slopeMovingAverage = 0.0
-                    while (len(tempMovingAverageList) > num_pnts_smooth):
-                        tempMovingAverageList.pop(0) # remove oldest elements in list
-                    while (len(slopeMovingAverageList) > num_pnts_smooth-1):
-                        slopeMovingAverageList.pop(0) # slopeMovingAverage is one less because it's a diff 
+                # smooth data
+                tempMovingAverage = 0.0 # moving avg init
+                slopeMovingAverage = 0.0
+                while (len(tempMovingAverageList) > num_pnts_smooth):
+                    tempMovingAverageList.pop(0) # remove oldest elements in list
+                while (len(slopeMovingAverageList) > num_pnts_smooth-1):
+                    slopeMovingAverageList.pop(0) # slopeMovingAverage is one less because it's a diff 
 
-                    for temp_pnt in tempMovingAverageList:
-                        tempMovingAverage += temp_pnt["temp"]
-                    tempMovingAverage /= len(tempMovingAverageList)
+                for temp_pnt in tempMovingAverageList:
+                    tempMovingAverage += temp_pnt["temp"]
+                tempMovingAverage /= len(tempMovingAverageList)
 
-                    # Now, compute the moving average of the slope
-                    # We need at least two values to compute a difference
-                    if len(tempMovingAverageList) > 1:
-                        i = 0
-                        while i < len(tempMovingAverageList):
-                            diff = tempMovingAverageList[i+1]["temp"] - tempMovingAverageList[i]["temp"]
-                            slope = diff / (tempMovingAverageList[i+1]["timestamp"] - tempMovingAverageList[i]["timestamp"])
-                            slopeMovingAverage =+ slope
-                            i += 1
-                        slopeMovingAverage /= len(tempMovingAverageList)
- 
-            #        print "len(tempMovingAverageList) = %d" % len(tempMovingAverageList)
-            #        print "Num Points smooth = %d" % num_pnts_smooth
-            #        print "tempMovingAverage = %.2f" % tempMovingAverage
-            #        print tempMovingAverageList
+                # Now, compute the moving average of the slope
+                # We need at least two values to compute a difference
+                if len(tempMovingAverageList) > 1:
+                    i = 0
+                    while i < len(tempMovingAverageList)-1:
+                        diff = tempMovingAverageList[i+1]["temp"] - tempMovingAverageList[i]["temp"]
+                        slope = diff / (tempMovingAverageList[i+1]["timestamp"] - tempMovingAverageList[i]["timestamp"])
+                        slopeMovingAverage =+ slope
+                        i += 1
+                    slopeMovingAverage /= len(tempMovingAverageList)
 
-                    # calculate PID every cycle
-                    if (readyPIDcalc == True):
-                        gasOutput = pid.calcPID_reg4(slopMovingAverage, set_point, True)
-                        # send to heat process every cycle
-                        if not oldMode == mode:
-                            myRoaster.getGasServo().setToSafeLow()
-                            print "%s changing to %s" %(oldMode,mode)
-                        oldMode = mode
-                        parentHeat.send([sampleTime, gasOutput])
-                        readyPIDcalc = False
+        #        print "len(tempMovingAverageList) = %d" % len(tempMovingAverageList)
+        #        print "Num Points smooth = %d" % num_pnts_smooth
+        #        print "tempMovingAverage = %.2f" % tempMovingAverage
+        #        print tempMovingAverageList
 
-                tempSensorsParam.append([tempSensor.getTempSensorId(),tempSensor.getTempSensorName(),temp_str])
-                gasServoParam = [myRoaster.getGasServo().getServoId(),myRoaster.getGasServo().getSafeLow(),gasOutput]
-                # put current status in queue
-                try:
-                    paramStatus = packParamGet(numTempSensors, tempSensor.getTempSensorId(), temp_str, tempUnits, elapsed, mode, sampleTime, gasOutput, \
-                            boil_gasOutput, set_point, boil_manage_temp, num_pnts_smooth, k_param, i_param, d_param,tempSensorsParam, gasServoParam) 
-#        "tempSensors" : [],
-#        "gasValve" : [],
+                # calculate PID every cycle
+                if (readyPIDcalc == True):
+                    gasOutput = pid.calcPID_reg4(slopeMovingAverage, set_point, True)
+                    # send to heat process every cycle
+                    if not oldMode == mode:
+                        myRoaster.getGasServo().setToSafeLow()
+                        print "%s changing to %s" %(oldMode,mode)
+                    oldMode = mode
+                    parentHeat.send([sampleTime, gasOutput])
+                    readyPIDcalc = False
 
-                    statusQ.put(paramStatus) #GET request
-                except Full:
-                    pass
+            gasServoParam = [myRoaster.getGasServo().getServoId(),myRoaster.getGasServo().getSafeLow(),gasOutput]
+            # put current status in queue
+            try:
+                paramStatus = packParamGet(temp_str, tempUnits, elapsed, mode, sampleTime, gasOutput, \
+                         set_point, num_pnts_smooth, k_param, i_param, d_param,tempSensorsParam, gasServoParam, rotation) 
 
-                while (statusQ.qsize() >= 2):
-                    statusQ.get() #remove old status
+                statusQ.put(paramStatus) #GET request
+            except Full:
+                pass
 
-                logdata(tempSensorNum, temp, gasOutput)
-                if DEBUG:
-                    print("Current Temp: %3.2f deg %s, Heat Output: %3.1f%%" \
-                                                        % (temp, tempUnits, gasOutput))
+            while (statusQ.qsize() >= 2):
+                statusQ.get() #remove old status
+
+            logdata(tempSensorNum, temp, gasOutput)
+            if DEBUG:
+                print("Current Temp: %3.2f deg %s, Heat Output: %3.1f%%" \
+                                                    % (temp, tempUnits, gasOutput))
 
         while parentHeat.poll(): # Poll Heat Process Pipe
             sampleTime, gasOutput = parentHeat.recv() #non blocking receive from Heat Process
@@ -363,9 +421,9 @@ def tempControlProc(myRoaster, paramStatus, conn):
 
         # Pick up any environment changes
         readyPOST = False
-        while conn.poll(): #POST settings - Received POST from web browser or Android device
-            paramStatus = conn.recv()
-            mode, sampleTime, gasOutput_temp, boil_gasOutput, set_point, boil_manage_temp, num_pnts_smooth, \
+        while childParamConn.poll(): #POST settings - Received POST from web browser or Android device
+            paramStatus = childParamConn.recv()
+            tempUnits, mode, sampleTime, gasOutput_temp,  set_point, num_pnts_smooth, \
             k_param, i_param, d_param = unPackParamInitAndPost(paramStatus)
 
             readyPOST = True
@@ -410,82 +468,43 @@ def logdata(tank, temp, heat):
 if __name__ == '__main__':
     roastTime = time.time()
 
-    # Retrieve root element from config.xml for parsing
+    # Load up our config
     tree = ET.parse('config.xml')
     xml_root = tree.getroot()
     template_name = xml_root.find('Template').text.strip()
-
     root_dir_elem = xml_root.find('RootDir')
     if root_dir_elem is not None:
-        os.chdir(root_dir_elem.text.strip())
+        param.config["rootDir"] = root_dir_elem.text.strip()
+        os.chdir(param.config["rootDir"])
     else:
         print("No RootDir tag found in config.xml, running from current directory")
+
+    # Retrieve root element from config.xml for parsing
+    param.config["tempUnits"] = xml_root.find('Temp_Units').text.strip()
 
     # Look for roasters
     for roasters in xml_root.iter('Roasters'):
         print ("found roasters")
         for roaster in roasters:
-            roasterId = roaster.find('Roaster_Id').text
-            myRoaster = Roaster.Roaster(roasterId)
-
-            tempSensors = roaster.find('Temp_Sensors')
-            # A roaster can have more than one temperature probe
-            for tempSensor in tempSensors.iter('Temp_Sensor'):
-                # These need to be appended to a list so we can have more than one, but for now
-                # just leave this
-                tempSensorId        = tempSensor.find('Temp_Sensor_Id').text
-                tempSensorName      = tempSensor.find('Temp_Sensor_Name').text
-                tempSensorSPI       = tempSensor.find('SPI').text
-                tempSensorDriver    = tempSensor.find('Temp_Sensor_Driver').text
-
-                if tempSensorSPI == "hardware":
-                    myRoaster.addTempSensor(tempSensorId,tempSensorName,tempSensorDriver,tempSensorSPI)
-                elif tempSensorSPI == "gpio":
-                    myRoaster.addTempSensor(tempSensorId,tempSensorName,tempSensorDriver,tempSensorSPI,\
-                                                    int(tempSensor.find('clk').text), \
-                                                    int(tempSensor.find('cs').text), \
-                                                    int(tempSensor.find('do').text))
-                
-                # hackity hack hack hack. why isn't param updated in the first call of index()?
-                param.status["tempSensors"].append([tempSensorId,tempSensorName,0])
-
-            param.status["numTempSensors"] = len(myRoaster.getTempSensors())
+            param.config["roasterId"] = roaster.find('Roaster_Id').text
 
             # grab our gas servo
             servo       = roaster.find('Servo')
-            servoId     = servo.find('Servo_Id').text
-            driver      = servo.find('Servo_Driver').text
-            delay       = float(servo.find('Servo_Delay').text)
-            step        = int(servo.find('Step_Pin').text)
-            direction   = int(servo.find('Dir_Pin').text)
-            ms1         = int(servo.find('MS1_Pin').text)
-            ms2         = int(servo.find('MS2_Pin').text)
-            home        = int(servo.find('Home_Pin').text)
-            steps       = servo.find('Step').text
-            stepsPer    = int(servo.find('Steps_Per_Rotation_Full').text)
-
+            param.config["servoId"]         = servo.find('Servo_Id').text
+            param.config["servoDriver"]     = servo.find('Servo_Driver').text
+            param.config["servoDelay"]      = float(servo.find('Servo_Delay').text)
+            param.config["servoStepPin"]     = int(servo.find('Step_Pin').text)
+            param.config["servoDirPin"]     = int(servo.find('Dir_Pin').text)
+            param.config["servoMS1Pin"]     = int(servo.find('MS1_Pin').text)
+            param.config["servoMS2Pin"]     = int(servo.find('MS2_Pin').text)
+            param.config["servoHomePin"]    = int(servo.find('Home_Pin').text)
+            param.config["servoSteps"]      = servo.find('Step').text
+            param.config["servoStepsPer"]   = int(servo.find('Steps_Per_Rotation_Full').text)
 
             # get our valve info
             valve    = roaster.find('Valve')
-            maxTurns = int(valve.find('Max_Turns_Ceil').text)
-            safeLow  = int(valve.find('Safe_Low_Percent').text)
-        
-            param.status["gasValve"] = [servoId,safeLow,0]
-
-            myRoaster.addGasServo(servoId,driver,delay,step,direction,ms1,ms2,home,maxTurns,safeLow,steps,stepsPer)
-            myGasServo = myRoaster.getGasServo()
-            
-            statusQ = Queue(2) # blocking queue
-            myRoaster.addStatusQ(statusQ)
-
-            # Ugly, but we need to make access to the status queue global
-            roasterStatusQ.append(statusQ) #blocking queue        
-
-            parent_conn, child_conn = Pipe()
-            p = Process(name = "tempControlProc", target=tempControlProc, args=(myRoaster, param.status, child_conn))
-            p.start()
-
-            myGasServo.home()
+            param.config["valveMaxTurns"]   = int(valve.find('Max_Turns_Ceil').text)
+            param.config["valveSafeLow"]    = int(valve.find('Safe_Low_Percent').text)
 
     logger = logging.getLogger('werkzeug')
     handler = logging.FileHandler('access.log')

@@ -22,13 +22,13 @@
 
 var timeElapsed, tempDataArray, heatDataArray, setpointDataArray, dutyCycle, options_temp, options_heat, plot;
 var capture_on = 0;
-var numTempSensors, tempUnits, temp, setpoint;
+var tempUnits, temp, setpoint;
 // Roaster animation vars
 var elem, output, tilt; // DOM objects
 var rHeight, rx, rRect, rCircle, rCross, rCrosses;
-var rPercentFull;
+var rPercentFull, rCurrentTilt, rRotation, rDirection
+var rDirections = Array();
 var two;
-var rCurrentTilt;
 
 // Column highlighting
 $('input[name=profilelock]').on('click', function() {
@@ -274,7 +274,6 @@ function showTooltip(x, y, contents) {
 }
 
 function storeData(index, data) {
-
 	if (data.mode == "auto") {
 		//setpoint_C = (5.0/9.0)*(parseFloat(data.set_point) - 32);
 		setpointDataArray[index].push([timeElapsed[index], parseFloat(data.set_point)]);
@@ -324,7 +323,7 @@ function waitForMsg() {
 
 	jQuery.ajax({
 		type : "GET",
-		url : "/getstatus/1",
+		url : "/getstatus",
 		dataType : "json",
 		async : true,
 		cache : false,
@@ -338,8 +337,6 @@ function waitForMsg() {
 			//temp_C = (5.0/9.0)*(parseFloat(data.temp) - 32);
 			//temp_C = temp_C.toFixed(2);
 
-			numTempSensors = parseInt(data.numTempSensors);
-
 			jQuery('#dutyCycleUnits').html("%");
 			if (data.tempUnits == "F") {
 				jQuery('#tempResponseUnits').html("&#176F");
@@ -351,7 +348,9 @@ function waitForMsg() {
 				jQuery('#setpointInputUnits').html("&#176C");
 			}
 
-			jQuery('#tempResponse').html(data.temp);
+            for(i=1;i<=data.tempSensors.length;i++){
+                jQuery('#tempResponse'+i).html(data.tempSensors[i-1][2]);
+            }
 			jQuery('#modeResponse').html(data.mode);
 			jQuery('#setpointResponse').html(data.set_point);
 			jQuery('#dutycycleResponse').html(data.gasOutput.toFixed(2));
@@ -360,15 +359,57 @@ function waitForMsg() {
 			jQuery('#i_paramResponse').html(data.i_param);
 			jQuery('#d_paramResponse').html(data.d_param);
 
-			storeData(0, data);
+            // Which direction are we going?
+            rRotation = (Math.round(data.roasterRotation) * 10)/10;
+            if(rRotation < 0){
+                rRotation = 180 + (180 + rRotation);
+            }
+            // Reverse the rotation
+            rRotation = 360 - rRotation;
+            // Rotation is now expressed in postive degrees from 0 - 360
 
+            // Calculate a moving average of direction
+            var rDirSize = rDirections.unshift(rRotation);
+            if (rDirSize > 25){
+                rDirections.pop();
+                rDirSize--;
+            }
+                
+            var out = '';
+            var out2 = '';
+
+            if(rDirSize < 2){
+                // Can't calculate a moving average without at least two points
+                rDirection = 0;
+            }
+            else{
+                for(i=0,rDirection=0;i<rDirSize-1;i++){
+                    if(rDirections[i] > rDirections[i+1]){
+                        rDirection++;
+                    }
+                    if(rDirections[i] < rDirections[i+1]){
+                        rDirection--;
+                    }
+                    out = out + "," + rDirection;
+                    out2 = out2 + "," + rDirections[i];
+                }
+            }
+                
+            jQuery('#rotation').html(rDirection + "<p>" + out + "<p>"+ out2);
+
+
+			storeData(0, data);
 			if (capture_on == 1) {
 				if ($('#1Row').hasClass('row-highlight') == true) {
 					plotData(0, data);
 				}
-				setTimeout('waitForMsg()', 1);
 				//in millisec
+                setTimeout('waitForMsg()', 1);
 			}
+            else {
+                // Don't bombard us if we're not capturing
+                setTimeout('waitForMsg()', 1);
+            }
 		}
 	});
 };
@@ -381,22 +422,22 @@ function drawProbes(two, total_height, probes) {
   var group = two.makeGroup();
   if(probes[0]){
     p[0] = two.makeRectangle(0, height/2, width, height);
-    p[0].stroke = 'rgb(0, 191, 168)';
+    p[0].stroke = 'rgb(66,133,244)';
     group.add(p[0]);
   }
   if(probes[1]){
     p[1] = two.makeRectangle(0, -height/2, width, height);
-    p[1].stroke = 'rgb(240, 91, 0)';
+    p[1].stroke = 'rgb(15, 157, 88)';
     group.add(p[1]);
   }
   if(probes[2]){
     p[2] = two.makeRectangle(-height/2, 0, height, width);
-    p[2].stroke = 'rgb(120, 191, 225)';
+    p[2].stroke = 'rgb(244, 160, 0)';
     group.add(p[2]);
   }
   if(probes[3]){
     p[3] = two.makeRectangle(height/2, 0, height, width);
-    p[3].stroke = 'rgb(220, 291, 225)';
+    p[3].stroke = 'rgb(219, 68, 5)';
     group.add(p[3]);
   }
   return group;
@@ -407,12 +448,13 @@ jQuery(document).ready(function() {
     rHeight = 200;
     rPercentFull = 50;
     rCurrentTilt = 0;
+    rDirection = 1; // 1 == CW, -1 == CCW
 
     // Find our DOM objects
     elem = document.getElementById('draw-animation');
     rx = elem.offsetWidth/2;
     ry = rHeight / 2; 
-    //output = document.getElementById('output');
+    output = document.getElementById('output');
     tilt = document.getElementById("spillangle").value;
 
     // Create our Two.js object
@@ -436,13 +478,30 @@ jQuery(document).ready(function() {
     // Bind our update trigger
     two.bind('update', function(frameCount) {
       var tick = 100;
-      var rot = frameCount / tick
+      var rot = Math.round( (rRotation * (Math.PI/180)) * 100 )/100 ;
+//      var rot = frameCount / tick
       var rPercentFull = document.getElementById("fullpercent").value;
       var pfull_mult = (rHeight * (rPercentFull * 0.01));
       var qturn = 90 * Math.PI /180;
       tilt = document.getElementById("spillangle").value;
 
-      rCross.rotation = rot+qturn;
+      //rCross.rotation = rot+qturn;
+      var cRot = Math.round(100 * (rCross.rotation % (2*Math.PI))) / 100;
+      if(cRot < rot){
+        rCross.rotation += 0.01;
+      }
+      if(cRot > rot){
+        rCross.rotation -= 0.01;
+      }
+/*      else if (rCross.rotation  % (2*Math.PI)> rot){
+        if(qrot > rCross.rotation  % (2*Math.PI) ){
+            rCross.rotation += 0.01;
+        }
+        else{
+            rCross.rotation -= 0.01;
+        }
+      }
+*/
       if(Math.round(rCurrentTilt*100)/100 != Math.round(tilt*100)/100){
         rRect.rotation = rCurrentTilt+qturn;
         rRect.translation.x = (rHeight - pfull_mult) * Math.cos(rCurrentTilt+qturn) + rx;
@@ -458,7 +517,7 @@ jQuery(document).ready(function() {
         rRect.translation.x = (rHeight - pfull_mult) * Math.cos(rRect.rotation) + rx;
         rRect.translation.y = (rHeight - pfull_mult) * Math.sin(rRect.rotation) + ry;
       }
-      //output.innerHTML = "qturn: " + qturn + "<p>framecount: " + frameCount + "<p>rot: " + rot + "<p> tilt: " + tilt + "<p>rCurrentTilt: " + rCurrentTilt + "<p>pfull_mult: " + pfull_mult + "<p>((rHeight*2) - pfull_mult): " +  ((rHeight*2) - pfull_mult);
+      output.innerHTML = "rDirection: " + rDirection + "<p>cRot: " + cRot + "<p>rot: " + rot +  "<p>rCross.rotation % (2*Math.PI): " + rCross.rotation % (2*Math.PI) + "<p>tilt: " + tilt + "<p>rCurrentTilt: " + rCurrentTilt + "<p>pfull_mult: " + pfull_mult + "<p>((rHeight*2) - pfull_mult): " +  ((rHeight*2) - pfull_mult);
     });
 
     // one-time on load, lock the time column
@@ -589,26 +648,6 @@ jQuery(document).ready(function() {
 				},
 			});
 		}
-		if (($('#secondRow').hasClass('row-highlight') == true) && (numTempSensors >= 2)) {
-
-			jQuery.ajax({
-				type : "POST",
-				url : "/postparams/2",
-				data : formdata,
-				success : function(data) {
-				},
-			});
-		}
-		if (($('#thirdRow').hasClass('row-highlight') == true) && (numTempSensors >= 3)) {
-
-			jQuery.ajax({
-				type : "POST",
-				url : "/postparams/3",
-				data : formdata,
-				success : function(data) {
-				},
-			});
-		}
 
 		//reset plot
 		if (jQuery('#off').is(':checked') == false) {
@@ -671,6 +710,7 @@ jQuery(document).ready(function() {
 		}
 	};
 
+    plotData(0, []);
 	waitForMsg();
 
 });
