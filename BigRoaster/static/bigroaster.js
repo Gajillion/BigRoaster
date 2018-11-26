@@ -24,10 +24,9 @@ var timeElapsed, tempDataArray, heatDataArray, setpointDataArray, dutyCycle, opt
 var capture_on = 0;
 var tempUnits, temp, setpoint;
 // Roaster animation vars
-var elem, output, tilt; // DOM objects
+var elem, output, tilt, isCCW; // DOM objects
 var rHeight, rx, rRect, rCircle, rCross, rCrosses;
-var rPercentFull, rCurrentTilt, rRotation, rDirection
-var rDirections = Array();
+var rPercentFull, rCurrentTilt, rAngleProbeOne;
 var two;
 
 // Column highlighting
@@ -359,44 +358,8 @@ function waitForMsg() {
 			jQuery('#i_paramResponse').html(data.i_param);
 			jQuery('#d_paramResponse').html(data.d_param);
 
-            // Which direction are we going?
-            rRotation = (Math.round(data.roasterRotation) * 10)/10;
-            if(rRotation < 0){
-                rRotation = 180 + (180 + rRotation);
-            }
-            // Reverse the rotation
-            rRotation = 360 - rRotation;
-            // Rotation is now expressed in postive degrees from 0 - 360
-
-            // Calculate a moving average of direction
-            var rDirSize = rDirections.unshift(rRotation);
-            if (rDirSize > 25){
-                rDirections.pop();
-                rDirSize--;
-            }
-                
-            var out = '';
-            var out2 = '';
-
-            if(rDirSize < 2){
-                // Can't calculate a moving average without at least two points
-                rDirection = 0;
-            }
-            else{
-                for(i=0,rDirection=0;i<rDirSize-1;i++){
-                    if(rDirections[i] > rDirections[i+1]){
-                        rDirection++;
-                    }
-                    if(rDirections[i] < rDirections[i+1]){
-                        rDirection--;
-                    }
-                    out = out + "," + rDirection;
-                    out2 = out2 + "," + rDirections[i];
-                }
-            }
-                
-            jQuery('#rotation').html(rDirection + "<p>" + out + "<p>"+ out2);
-
+            // What is the angle of probe 1?
+            rAngleProbeOne = data.roasterRotation;
 
 			storeData(0, data);
 			if (capture_on == 1) {
@@ -443,12 +406,12 @@ function drawProbes(two, total_height, probes) {
   return group;
 }
 
+
 jQuery(document).ready(function() {
     // Roaster animation setup
     rHeight = 200;
     rPercentFull = 50;
     rCurrentTilt = 0;
-    rDirection = 1; // 1 == CW, -1 == CCW
 
     // Find our DOM objects
     elem = document.getElementById('draw-animation');
@@ -478,30 +441,21 @@ jQuery(document).ready(function() {
     // Bind our update trigger
     two.bind('update', function(frameCount) {
       var tick = 100;
-      var rot = Math.round( (rRotation * (Math.PI/180)) * 100 )/100 ;
-//      var rot = frameCount / tick
       var rPercentFull = document.getElementById("fullpercent").value;
       var pfull_mult = (rHeight * (rPercentFull * 0.01));
       var qturn = 90 * Math.PI /180;
+      var rot = frameCount / tick;
+      var rDirection = $('#direction').is(":checked");
+      if (rDirection){
+        rCross.rotation -= 0.01;
+      }
+      else{
+        rCross.rotation += 0.01;
+      }
       tilt = document.getElementById("spillangle").value;
 
       //rCross.rotation = rot+qturn;
-      var cRot = Math.round(100 * (rCross.rotation % (2*Math.PI))) / 100;
-      if(cRot < rot){
-        rCross.rotation += 0.01;
-      }
-      if(cRot > rot){
-        rCross.rotation -= 0.01;
-      }
-/*      else if (rCross.rotation  % (2*Math.PI)> rot){
-        if(qrot > rCross.rotation  % (2*Math.PI) ){
-            rCross.rotation += 0.01;
-        }
-        else{
-            rCross.rotation -= 0.01;
-        }
-      }
-*/
+
       if(Math.round(rCurrentTilt*100)/100 != Math.round(tilt*100)/100){
         rRect.rotation = rCurrentTilt+qturn;
         rRect.translation.x = (rHeight - pfull_mult) * Math.cos(rCurrentTilt+qturn) + rx;
@@ -517,7 +471,7 @@ jQuery(document).ready(function() {
         rRect.translation.x = (rHeight - pfull_mult) * Math.cos(rRect.rotation) + rx;
         rRect.translation.y = (rHeight - pfull_mult) * Math.sin(rRect.rotation) + ry;
       }
-      output.innerHTML = "rDirection: " + rDirection + "<p>cRot: " + cRot + "<p>rot: " + rot +  "<p>rCross.rotation % (2*Math.PI): " + rCross.rotation % (2*Math.PI) + "<p>tilt: " + tilt + "<p>rCurrentTilt: " + rCurrentTilt + "<p>pfull_mult: " + pfull_mult + "<p>((rHeight*2) - pfull_mult): " +  ((rHeight*2) - pfull_mult);
+      //output.innerHTML = "rot: " + rot + "<p>frameCount/tick: " + frameCount/tick + "<p>frameCount/tick * -1: " + (frameCount / tick) * -1
     });
 
     // one-time on load, lock the time column

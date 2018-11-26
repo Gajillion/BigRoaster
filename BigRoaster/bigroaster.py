@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: iso-8859-15 -*-
 #
 # Copyright (c) 2017-2018 Mark Juric
 # Copyright (c) 2012-2015 Stephen P. Smith
@@ -64,7 +65,7 @@ class param:
         "k_param" : 1.2,
         "i_param" : 1,
         "d_param" : 0.001,
-        "sampleRate" : 50,             
+        "sampleRate" : 500,             
         "checkInRate" : 20,             
         "roasterRotation" : 0,             
         "roasterTilt" : 0,             
@@ -329,12 +330,10 @@ def tempControlProc(tempQ, myRoaster, paramStatus, childParamConn):
             # which probe to pay attention to.
     
             # Rotation applies to probe 1. 
-            # Face down: 180
-            # Face up: 0
-            # Battery side (esp8266 up): 90
-            # Battery side (esp8266 down): -90
-            # Back side (esp8266 up): -90
-            # Back side (esp8266 down): 90
+            # Face down: π
+            # Face up: 0..2*π
+            # Battery side (esp8266 up): π/2
+            # Back side (esp8266 up): 1.5*π
             rotation = sensorInfo["position"]["rotation"]
             for sensor in sensorInfo["probes"]:
                 temp_C = sensor["temp"]
