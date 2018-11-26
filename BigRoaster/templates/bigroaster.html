@@ -46,7 +46,7 @@
                         {% for tempSensor in tempSensors %}
 							<tr id="{{loop.index}}Row" data-toggle="collapse" data-target="#extra_data_info{{loop.index}}" class="selectRow row-highlight accordion-toggle">
 								<td align="center"><h5>sensor: {{tempSensor[1]}}</h5></td>
-								<td align="center"><h5><span id="tempResponse">60</span><span id="tempResponseUnits">&degF</span></h5></td>
+								<td align="center"><h5><span id="tempResponse{{loop.index}}">60</span><span id="tempResponseUnits">&degF</span></h5></td>
 								<td align="center"><h5></h5></td>
 								<!-- <td align="center"><h5><span id="dutycycleResponse">0</span><span id="dutyCycleUnits"> </span></h5></td> -->
 							</tr>
@@ -107,8 +107,10 @@
                         <div id="controls">
                             <input type="range" id="fullpercent" value="50" min=0 max=100 step=1 />fullness
                             <p><input type="range" id="spillangle" value="0.1" min=0 max=.75 step=0.01 />bean tilt
+                            <p>cw&nbsp;<label class="switch"> <input id="direction" type="checkbox"> <span class="slider round"></span></label>&nbsp;ccw
+                            <div id="rotation"></div>
                         </div>
-                        <!-- <div id="output"></div> -->
+                        <div id="output"></div>
                     </fieldset>
 
 
@@ -216,11 +218,11 @@
 									<p class="plottitle">
 										Temperature Plot
 									</p>
-									<div id="tempplot" align=left  style="width:500px;height:125px;"></div>
+									<div id="tempplot" align=left  style="width:750;height:125px;"></div>
 									<p class="plottitle">
 										Heat Plot
 									</p>
-									<div id="heatplot" align=left  style="width:500px;height:125px;"></div>
+									<div id="heatplot" align=left  style="width:750;height:125px;"></div>
 									<br/>
 									Window Size:
 									<input id="windowSizeText" type="text" name="windowSize"  maxlength = "6" size ="6" value=1000000 style="text-align: right;"/>
@@ -233,7 +235,7 @@
 										Restart Capture
 									</button>
 									<!-- <button id = "calcpid">Calculate PID</button> -->
-
+                                    <canvas id="myChart" width="750" height="125"></canvas>
 								</div>
 							</div>
 					</fieldset>
@@ -376,6 +378,8 @@
             <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
             <script type="text/javascript" src="static/external/jquery-2.0.3/jquery-2.0.3.min.js"></script>
             <!-- Include all compiled plugins (below), or include individual files as needed -->
+            <!-- <script type="text/javascript" src="static/external/Chart.bundle.js"></script>
+            <script type="text/javascript" src="static/plotter.js"></script> -->
             <script type="text/javascript" src="static/external/bootstrap-3.0.3/js/bootstrap.min.js"></script>
             <script type="text/javascript" src="static/external/gauge.min.js"></script>
             <script type="text/javascript" src="static/external/flot-0.8.2/jquery.flot.js"></script>
