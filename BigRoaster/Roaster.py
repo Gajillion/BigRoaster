@@ -1,5 +1,6 @@
 import TempSensor
 import GasServo
+import pprint
 
 class Roaster:
     roasterId   = ''
@@ -10,12 +11,14 @@ class Roaster:
     def __init__(self, roasterId):
         self.roasterId = roasterId
 
-    def addTempSensor(self,tempSensorId,driver,spi,clk='',cs='',do=''):
+    def addTempSensor(self,tempSensorId,name='',driver='',spi='',clk='',cs='',do=''):
         if spi == 'hardware':
-            self.tempProbes.append(TempSensor.TempSensor(tempSensorId,driver,spi))
+            self.tempProbes.append(TempSensor.TempSensor(tempSensorId,name,driver,spi))
+        elif spi == "gpio":
+            self.tempProbes.append(TempSensor.TempSensor(tempSensorId,name,driver,spi,clk,cs,do))
         else:
-            self.tempProbes.append(TempSensor.TempSensor(tempSensorId,driver,spi,clk,cs,do))
-
+            self.tempProbes.append(TempSensor.TempSensor(tempSensorId,name))
+        
     def getTempSensors(self):
         return self.tempProbes
 
@@ -26,10 +29,4 @@ class Roaster:
 
     def getGasServo(self):
         return self.gasServo
-
-    def addStatusQ(self,statusQ):
-        self.statusQueue = statusQ
-
-    def getStatusQ(self):
-        return self.statusQueue
 

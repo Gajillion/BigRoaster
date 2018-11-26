@@ -4,12 +4,13 @@ class TempSensor:
     myTempSensor    = None
     myPipe          = None
 
-    def __init__(self, tempSensorId, tempSensorName, driver, spi, clk='', cs='', do=''):
+    def __init__(self, tempSensorId, tempSensorName='', driver='', spi='', clk='', cs='', do=''):
         self.tempSensorId = tempSensorId
         self.tempSensorName = tempSensorName
 
-        tempDriver = __import__(driver)
-        myDriver = getattr(tempDriver,driver)
+        if not driver == '':
+            tempDriver = __import__(driver)
+            myDriver = getattr(tempDriver,driver)
 
         if spi == "hardware":
             import Adafruit_GPIO.SPI as SPI
@@ -23,7 +24,8 @@ class TempSensor:
                                             int(tempSensor.find('cs').text), \
                                             int(tempSensor.find('do').text))
         else:
-            print "ABORT!!!"
+            # Doing this until we eliminate this class entirely
+            self.myTempSensor = None
 
         print("Constructing %s sensor %s"%(driver,tempSensorId))
 

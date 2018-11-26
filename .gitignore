@@ -1,4 +1,4 @@
-roasting0.csv
+roasting*.csv
 access.log
 *.pyc
 *.swp
