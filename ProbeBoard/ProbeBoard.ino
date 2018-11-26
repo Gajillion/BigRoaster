@@ -135,6 +135,12 @@ void setup(void) {
 
 void loop() {
   lis.read();      // get X Y and Z data at once
+  // We lost power, try again. 
+  if(lis.x == 0 && lis.y == 0 && lis.z == 0){
+    lis.begin(0x18);
+    lis.setRange(LIS3DH_RANGE_2_G);   // 2G
+    lis.read();      // get X Y and Z data at once
+  }
   if (WiFi.status() == WL_CONNECTED) {
     // See if we have any status updates
     if (checkInCount > checkInRate) {
