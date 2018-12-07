@@ -1,390 +1,381 @@
 <!DOCTYPE html>
-<html>
-	<!-- FuelUX attribute -->
-	<head>
-		<meta charset="utf-8">
-		<title>BIG roaster</title>
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<!-- Bootstrap -->
-		<link type="text/css" href="static/external/bootstrap-3.0.3/css/bootstrap.min.css" rel="stylesheet">
-		<link type="text/css" href="static/external/css-toggle-switch/toggle-switch.css" rel="stylesheet">
-		<link type="text/css" href="static/bigroaster.css" rel="stylesheet">
+<html lang="en"> <!-- FuelUX attribute --> <head>
+        <meta charset="utf-8">
+        <title>BIG roaster</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <!-- Bootstrap -->
+        <link type="text/css" href="static/external/bootstrap-3.0.3/css/bootstrap.min.css" rel="stylesheet">
+        <link type="text/css" href="static/external/css-toggle-switch/toggle-switch.css" rel="stylesheet">
+        <link type="text/css" href="static/bigroaster.css" rel="stylesheet">
 
-		<!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
-		<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-		<!--[if lt IE 9]>
-		<script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-		<script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
-		<![endif]-->
-	</head>
-	<body>
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <body>
 
-		<div class="container">
+        <div class="container">
+            <div class="page-header">
+                <h1>BIG roaster</h1>
+            </div>
 
-			<div class="page-header">
-				<h1>BIG roaster</h1>
-			</div>
-
-			<div class="row">
-				<div class="col-xs-5">
+            <div class="row">
+                <div class="col-xs-5">
                     <!-- if we ever control more than one roaster, we'd have to iterate over this table -->
-					<table id="dataTable" class="table table-bordered table-condensed table-responsive style="border-collapse:collapse;"">
-						<thead>
-							<tr>
-								<th colspan="3">Roaster</th>
-							</tr>
-						</thead>
-						<thead>
-							<tr>
-								<th class="col-xs-4"></th>
-								<th class="col-xs-4">Temp</th>
-								<th class="col-xs-4">Heat Output</th>
+                    <table id="dataTable" class="table table-bordered table-condensed table-responsive" style="border-collapse:collapse;">
+                        <thead>
+                            <tr>
+                                <th colspan="3">Roaster</th>
+                            </tr>
+                            <tr>
+                                <th class="col-xs-4"></th>
+                                <th class="col-xs-4">Temp</th>
+                                <th class="col-xs-4">Heat Output</th>
 
-							</tr>
-						</thead>
-						<tbody>
-                        {% for tempSensor in tempSensors %}
-							<tr id="{{loop.index}}Row" data-toggle="collapse" data-target="#extra_data_info{{loop.index}}" class="selectRow row-highlight accordion-toggle">
-								<td align="center"><h5>sensor: {{tempSensor[1]}}</h5></td>
-								<td align="center"><h5><span id="tempResponse{{loop.index}}">60</span><span id="tempResponseUnits">&degF</span></h5></td>
-								<td align="center"><h5></h5></td>
-								<!-- <td align="center"><h5><span id="dutycycleResponse">0</span><span id="dutyCycleUnits"> </span></h5></td> -->
-							</tr>
-							<tr>
-								<td colspan="3" class="hiddenRow" id="vessel{{loop.index}}">
-								<div class="accordian-body collapse" id="extra_data_info{{loop.index}}">
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tempSensor in tempSensors %}
+                            <tr id="{{loop.index}}Row" data-toggle="collapse" data-target="#extra_data_info{{loop.index}}" class="selectRow row-highlight accordion-toggle">
+                                <td class="text-center"><h5>sensor: {{tempSensor[1]}}</h5></td>
+                                <td class="text-center"><h5><span id="tempResponse{{loop.index}}">60</span><span id="tempResponseUnits">&degF;</span></h5></td>
+                                <td class="text-center"></td>
+                                <!-- <td class="text-center"><h5><span id="dutycycleResponse">0</span><span id="dutyCycleUnits"> </span></h5></td> -->
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="hiddenRow" id="vessel{{loop.index}}">
+                                    <div class="accordian-body collapse" id="extra_data_info{{loop.index}}">
 
-									<div class="voffset15"></div>
-									Mode:<span id="modeResponse" class="label label-default"></span>
-									<br>
-									Sample Time(sec): <span id="cycletimeResponse" class="label label-default"></span>
-									<br>
-									Set Point(<span id="setpointResponseUnits"></span>): <span id="setpointResponse" class="label label-default"></span>
-									<br>
-									Kc:<span id="k_paramResponse" class="label label-default"></span>
-									Ti:<span id="i_paramResponse" class="label label-default"></span>
-									Td:<span id="d_paramResponse" class="label label-default"></span>
+                                        <div class="voffset15"></div>
+                                        Mode:<span id="modeResponse" class="label label-default"></span>
+                                        <br>
+                                        Sample Time(sec): <span id="cycletimeResponse" class="label label-default"></span>
+                                        <br>
+                                        Set Point(<span id="setpointResponseUnits"></span>): <span id="setpointResponse" class="label label-default"></span>
+                                        <br>
+                                        Kc:<span id="k_paramResponse" class="label label-default"></span>
+                                        Ti:<span id="i_paramResponse" class="label label-default"></span>
+                                        Td:<span id="d_paramResponse" class="label label-default"></span>
 
-									<div class="voffset15"></div>
+                                        <div class="voffset15"></div>
 
-								</div></td>
-							</tr>
-                        {% endfor %}
-							<tr id="valveRow" data-toggle="collapse" data-target="#extra_data_info1" class="selectRow row-highlight accordion-toggle">
-								<td align="center"><h5>gas valve: {{gasValve[0]}}</h5></td>
-								<td align="center"><h5></h5></td>
-								<td align="center"><h5><span id="dutycycleResponse">0</span><span id="dutyCycleUnits"> </span></h5></td>
-							</tr>
-							<tr>
-								<td colspan="3" class="hiddenRow" id="vessel{{loop.index}}">
-								<div class="accordian-body collapse" id="extra_data_info{{loop.index}}">
+                                    </div></td>
+                            </tr>
+                            {% endfor %}
+                            <tr id="valveRow" data-toggle="collapse" data-target="#extra_data_info1" class="selectRow row-highlight accordion-toggle">
+                                <td class="text-center"><h5>gas valve: {{gasValve[0]}}</h5></td>
+                                <td class="text-center"></td>
+                                <td class="text-center"><h5><span id="dutycycleResponse">0</span><span id="dutyCycleUnits"> </span></h5></td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="hiddenRow" id="vessel{{loop.index}}">
+                                    <div class="accordian-body collapse" id="extra_data_info{{loop.index}}">
 
-									<div class="voffset15"></div>
-									Mode:<span id="modeResponse" class="label label-default"></span>
-									<br>
-									Sample Time(sec): <span id="cycletimeResponse" class="label label-default"></span>
-									<br>
-									Set Point(<span id="setpointResponseUnits"></span>): <span id="setpointResponse" class="label label-default"></span>
-									<br>
-									Kc:<span id="k_paramResponse" class="label label-default"></span>
-									Ti:<span id="i_paramResponse" class="label label-default"></span>
-									Td:<span id="d_paramResponse" class="label label-default"></span>
+                                        <div class="voffset15"></div>
+                                        Mode:<span id="modeResponse" class="label label-default"></span>
+                                        <br>
+                                        Sample Time(sec): <span id="cycletimeResponse" class="label label-default"></span>
+                                        <br>
+                                        Set Point(<span id="setpointResponseUnits"></span>): <span id="setpointResponse" class="label label-default"></span>
+                                        <br>
+                                        Kc:<span id="k_paramResponse" class="label label-default"></span>
+                                        Ti:<span id="i_paramResponse" class="label label-default"></span>
+                                        Td:<span id="d_paramResponse" class="label label-default"></span>
 
-									<div class="voffset15"></div>
+                                        <div class="voffset15"></div>
 
-								</div></td>
-							</tr>
-						</tbody>
-					</table>
+                                    </div></td>
+                            </tr>
+                        </tbody>
+                    </table>
 
-					<div class="voffset20"></div>
+                    <div class="voffset20"></div>
 
                     <fieldset class="border">
-						<legend class="border">
-							Drum Position
-						</legend>
+                        <legend class="border">
+                            Drum Position
+                        </legend>
                         <div id="draw-animation"></div>
                         <div id="controls">
                             <input type="range" id="fullpercent" value="50" min=0 max=100 step=1 />fullness
                             <p><input type="range" id="spillangle" value="0.1" min=0 max=.75 step=0.01 />bean tilt
-                            <p>cw&nbsp;<label class="switch"> <input id="direction" type="checkbox"> <span class="slider round"></span></label>&nbsp;ccw
+                            <p>cw&nbsp;<label class="switch"> <input id="direction" type="checkbox"> <span class="slider round">&nbsp;</span></label>&nbsp;ccw
                             <div id="rotation"></div>
                         </div>
                         <div id="output"></div>
                     </fieldset>
 
 
-					<fieldset class="border">
+                    <fieldset class="border">
+                        <legend class="border">
+                            PID Control Panel
+                        </legend>
+                        <div class="voffset10"></div>
+                        <form id="controlPanelForm" method="post" class="form-horizontal">
+                            <div class="row">
+                                <div class="form-group">
+                                    <div class="btn-group col-sm-offset-3" data-toggle="buttons">
+                                        <label class="btn btn-primary">
+                                            <input type="radio" name="mode" id="auto" value="auto">
+                                            Auto </label>
+                                        <label class="btn btn-primary">
+                                            <input type="radio" name="mode" id="manual" value="manual">
+                                            Manual </label>
+                                        <label class="btn btn-primary active">
+                                            <input type="radio" name="mode" id="off" value="off" checked>
+                                            Off </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="form-group">
+                                    <label for="setpoint" class="col-xs-4 control-label">Set Point:</label>
+                                    <div class="input-group col-xs-4">
+                                        <input type="number" step="any" name="setpoint" class="form-control" id="setpoint" value={{set_point}}>
+                                        <span id="setpointInputUnits" class="input-group-addon"></span>
+                                    </div>
+                                    <div class="col-xs-4"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="dutycycle" class="col-xs-4 control-label">Gas Output:</label>
+                                    <div class="input-group col-xs-4">
+                                        <input name="dutycycle" id="dutycycle" type="number" step="any" class="form-control" value={{gasOutput}}>
+                                        <span class="input-group-addon">%</span>
+                                    </div>
+                                    <div class="col-xs-4"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cycletime" class="col-xs-4 control-label">Sample Time:</label>
+                                    <div class="input-group col-xs-4">
+                                        <input name="cycletime" type="number" step="any" class="form-control" id="cycletime" value={{sampleTime}}>
+                                        <span class="input-group-addon">sec</span>
+                                    </div>
+                                    <div class="col-xs-4"></div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="form-inline">
+                                    <div class="col-xs-1"></div>
+                                    <div class="form-group col-xs-3">
+                                        <label for="kc_param" class="control-label">Kc:</label>
+                                        <div class="input-group">
+                                            <input name="k" type="number" step="any" class="form-control" id="kc_param" value={{k_param}}>
+                                        </div>
+                                    </div>
+                                    <div class="form-group col-xs-3">
+                                        <label for="ti_param" class="control-label">Ti:</label>
+                                        <div class="input-group">
+                                            <input name="i" type="number" step="any" class="form-control" id="ti_param" value={{i_param}}>
+                                        </div>
+                                    </div>
+                                    <div class="form-group col-xs-3">
+                                        <label for="td_param" class="control-label">Td:</label>
+                                        <div class="input-group">
+                                            <input name="d" type="number" step="any" class="form-control " id="td_param" value={{d_param}}>
+                                        </div>
+                                    </div>
+                                    <div class="col-xs-2"></div>
+                                </div>
+                            </div>
 
-						<legend class="border">
-							PID Control Panel
-						</legend>
+                            <div class="voffset20"></div>
+                            <div class="row">
+                                <div class="form-group">
+                                    <div class="col-xs-offset-3">
+                                        <button id = "sendcommand" type="submit" class="btn btn-info">
+                                            Send Command
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
 
-						<div class="voffset10"></div>
+                        </form>
+                    </fieldset>
 
-						<form id="controlPanelForm" method="post" class="form-horizontal" role="form">
+                </div>
+                <div class="col-xs-7 hidden-xs">
+                    <fieldset class="border">
+                        <legend class="border">
+                            Line Plots
+                        </legend>
+                        <div class="row">
+                            <div class="ControlResponse" id="tempheatplots">
+                                <div class="tempdata">
+                                    <p class="plottitle">
+                                    Temperature Plot
+                                    </p>
+                                    <div id="tempplot" class="text-left" style="width:750;height:125px;"></div>
+                                    <p class="plottitle">
+                                    Heat Plot
+                                    </p>
+                                    <div id="heatplot" class="text-left"  style="width:750;height:125px;"></div>
+                                    <br/>
+                                    Window Size:
+                                    <input id="windowSizeText" class="text-right" type="text" name="windowSize"  maxlength = "6" size ="6" value=1000000 />
+                                    <br>
 
-							<div class="row">
-								<div class="form-group">
-									<div class="btn-group col-sm-offset-3" data-toggle="buttons">
-										
-										<label class="btn btn-primary">
-											<input type="radio" name="mode" id="auto" value="auto">
-											Auto </label>
-										<label class="btn btn-primary">
-											<input type="radio" name="mode" id="manual" value="manual">
-											Manual </label>
-										<label class="btn btn-primary active">
-											<input type="radio" name="mode" id="off" value="off" checked>
-											Off </label>
-									</div>
-								</div>
-							</div>
-							<div class="row">
-								<div class="form-group">
-									<label for="setpoint" class="col-xs-4 control-label">Set Point:</label>
-									<div class="input-group col-xs-4">
-										<input type="number" step="any" name="setpoint" class="form-control" id="setpoint" value={{set_point}}>
-										<span id="setpointInputUnits" class="input-group-addon"></span>
-									</div>
-									<div class="col-xs-4"></div>
-								</div>
-								<div class="form-group">
-									<label for="dutycycle" class="col-xs-4 control-label">Gas Output:</label>
-									<div class="input-group col-xs-4">
-										<input name="dutycycle" id="dutycycle" type="number" step="any" class="form-control" value={{gasOutput}}>
-										<span class="input-group-addon">%</span>
-									</div>
-									<div class="col-xs-4"></div>
-								</div>
-								<div class="form-group">
-									<label for="cycletime" class="col-xs-4 control-label">Sample Time:</label>
-									<div class="input-group col-xs-4">
-										<input name="cycletime" type="number" step="any" class="form-control" id="cycletime" value={{sampleTime}}>
-										<span class="input-group-addon">sec</span>
-									</div>
-									<div class="col-xs-4"></div>
-								</div>
-							</div>
-							<div class="row">
-								<div class="form-inline">
-									<div class="col-xs-1"></div>
-									<div class="form-group col-xs-3">
-										<label for="kc_param" class="control-label">Kc:</label>
-										<div class="input-group">
-											<input name="k" type="number" step="any" class="form-control" id="kc_param" value={{k_param}}>
-										</div>
-									</div>
-									<div class="form-group col-xs-3">
-										<label for="ti_param" class="control-label">Ti:</label>
-										<div class="input-group">
-											<input name="i" type="number" step="any" class="form-control" id="ti_param" value={{i_param}}>
-										</div>
-									</div>
-									<div class="form-group col-xs-3">
-										<label for="td_param" class="control-label">Td:</label>
-										<div class="input-group">
-											<input name="d" type="number" step="any" class="form-control " id="td_param" value={{d_param}}>
-										</div>
-									</div>
-									<div class="col-xs-2"></div>
-
-								</div>
-							</div>
-
-							<div class="voffset20"></div>
-							<div class="row">
-								<div class="form-group">
-									<div class="col-xs-offset-3">
-										<button id = "sendcommand" type="submit" class="btn btn-info">
-											Send Command
-										</button>
-									</div>
-								</div>
-							</div>
-
-						</form>
-					</fieldset>
-
-				</div>
-				<div class="col-xs-7 hidden-xs">
-					<fieldset class="border">
-						<legend class="border">
-							Line Plots
-						</legend>
-						<div class="row">
-							<div class="ControlResponse" id="tempheatplots">
-								<div class="tempdata">
-									<p class="plottitle">
-										Temperature Plot
-									</p>
-									<div id="tempplot" align=left  style="width:750;height:125px;"></div>
-									<p class="plottitle">
-										Heat Plot
-									</p>
-									<div id="heatplot" align=left  style="width:750;height:125px;"></div>
-									<br/>
-									Window Size:
-									<input id="windowSizeText" type="text" name="windowSize"  maxlength = "6" size ="6" value=1000000 style="text-align: right;"/>
-									<br>
-
-									<button class="btn btn-default" id = "stop">
-										Stop Capture
-									</button>
-									<button class="btn btn-default" id = "restart">
-										Restart Capture
-									</button>
-									<!-- <button id = "calcpid">Calculate PID</button> -->
-                                    <canvas id="myChart" width="750" height="125"></canvas>
-								</div>
-							</div>
-					</fieldset>
-				</div>
-				<div class="col-xs-7 hidden-xs">
-					<fieldset class="border">
-						<legend class="border">
-							Roasting Profile
-						</legend>
-						<div class="row">
-							<div class="RoastingProfile" id="roastingprofile">
-                                <form id="roastingProfileForm" method="post" class="form-horizontal" role="form" enctype="multipart/form-data">
-                                <table id="profileTable" class="table table-bordered table-condensed table-responsive style="border-collapse:collapse;"">
-                                    <thead>
-                                        <tr>
-                                            <th class="col-xs-1">Segment</th>
-                                            <th class="col-xs-3" name="rampcol">Ramp</th>
-                                            <th class="col-xs-3" name="timecol">Time</th>
-                                            <th class="col-xs-3" name="tempcol">Temp</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr id="lock" class="locking">
-                                            <th></th>
-                                            <td align="center" class="col-xs3">
-                                                <input type="radio" name="profilelock" id="ramplock">
-                                            </td>
-                                            <td align="center" class="col-xs3">
-                                                <input type="radio" name="profilelock" id="timelock">
-                                            </td>
-                                            <td align="center" class="col-xs3">
-                                                <input type="radio"  name="profilelock" id="templock">
-                                            </td>
-                                        </tr>
-                                        <tr id="ambient" data-toggle="collapse" data-target="#ambient_info" class="selectRow profileRow">
-                                            <th align="center" class="col-xs-3"><h5>Ambient Start</h5></th>
-                                            <td align="center" class="col-xs-3"><h5></h5></td>
-                                            <td align="center" class="col-xs-3"><h5></h5></td>
-                                            <td align="center" class="col-xs-3"><h5>
-                                                <div class="input-group">
-                                                    <input type="number" step="any" name="ambientfinaltemp" class="form-control profile" id="ambientFinaltemp" value={{ambient_finaltemp}}>
-                                                    <span id="profileTimeUnits" class="input-group-addon">&degF</span></h5>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <tr id="drying" data-toggle="collapse" data-target="#drying_info" class="lockable selectRow profileRow">
-                                            <th align="center" class="col-xs-1"><h5>Drying</h5></th>
-                                            <td align="center" class="col-xs-3"><h5>
-                                                <div class="input-group">
-                                                    <input type="number" step="0.5" name="dryingramp" class="form-control profile" id="dryingRamp" value={{drying_ramp}}>
-                                                    <span id="profileTempUnits" class="input-group-addon">/&degF</span></h5>
-                                                </div>
-                                            </td>
-                                            <td align="center" class="col-xs-3"><h5>
-                                                <div class="input-group">
-                                                    <input type="number" step="any" name="dryingtime" class="form-control profile" id="dryingTime" value={{drying_time}}>
-                                                    <span id="profileTimeUnits" class="input-group-addon">min</span></h5>
-                                                </div>
-                                            </td>
-                                            <td align="center" class="col-xs-3"><h5>
-                                                <div class="input-group">
-                                                    <input type="number" step="1" name="dryingfinaltemp" class="form-control profile" id="dryingFinaltemp" value={{drying_finaltemp}}>
-                                                    <span id="profileTempUnits" class="input-group-addon">&degF</span></h5>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <tr id="development" data-toggle="collapse" data-target="#development_info" class="lockable selectRow profileRow">
-                                            <th align="center" class="col-xs-1"><h5>Development</h5></th>
-                                            <td align="center" class="col-xs-3"><h5>
-                                                <div class="input-group">
-                                                    <input type="number" step="1" name="developmentramp" class="form-control profile" id="developmentRamp" value={{development_ramp}}>
-                                                    <span id="profileTempUnits" class="input-group-addon">/&degF</span></h5>
-                                                </div>
-                                            </td>
-                                            <td align="center" class="col-xs-3"><h5>
-                                                <div class="input-group">
-                                                    <input type="number" step="any" name="developmenttime" class="form-control profile" id="developmentTime" value={{development_time}}>
-                                                    <span id="profileTimeUnits" class="input-group-addon">min</span></h5>
-                                                </div>
-                                            </td>
-                                            <td align="center" class="col-xs-3"><h5>
-                                                <div class="input-group">
-                                                    <input type="number" step="1" name="developmentfinaltemp" class="form-control profile" id="developmentFinaltemp" value={{development_finaltemp}}>
-                                                    <span id="profileTempUnits" class="input-group-addon">&degF</span></h5>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <tr id="finish" data-toggle="collapse" data-target="#finish_info" class="lockable selectRow profileRow">
-                                            <th align="center" class="col-xs-1"><h5>Finishing</h5></th>
-                                            <td align="center" class="col-xs-3"><h5>
-                                                <div class="input-group">
-                                                    <input type="number" step="0.5" name="finishramp" class="form-control profile" id="finishRamp" value={{finish_ramp}}>
-                                                    <span id="profileTempUnits" class="input-group-addon">/&degF</span></h5>
-                                                </div>
-                                            </td>
-                                            <td align="center" class="col-xs-3"><h5>
-                                                <div class="input-group">
-                                                    <input type="number" step="any" name="finishtime" class="form-control profile" id="finishTime" value={{finish_time}}>
-                                                    <span id="profileTimeUnits" class="input-group-addon">min</span></h5>
-                                                </div>
-                                            </td>
-                                            <td align="center" class="col-xs-3"><h5>
-                                                <div class="input-group">
-                                                    <input type="number" step="1" name="finishfinaltemp" class="form-control profile" id="finishFinaltemp" value={{finish_finaltemp}}>
-                                                    <span id="profileTempUnits" class="input-group-addon">&degF EOR</span></h5>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-				                <div class="col-xs-12 hidden-xs">
-                                    <button id = "saveprofile" class="btn btn-info">
-                                        Save Profile
+                                    <button class="btn btn-default" id = "stop">
+                                        Stop Capture
                                     </button>
-                                    
+                                    <button class="btn btn-default" id = "start">
+                                        Start Capture
+                                    </button>
+                                    <!-- <button id = "calcpid">Calculate PID</button> -->
+                                </div> <!-- tempdata -->
+                            </div> <!-- tempheatpolots -->
+                        </div> <!-- row -->
+                    </fieldset>
+                </div>
+                <div class="col-xs-7 hidden-xs"> <!-- profile_div -->
+                    <fieldset class="border">
+                        <legend class="border">
+                            Roasting Profile
+                        </legend>
+                        <div class="row"> <!-- roastingprofile_row -->
+                            <div class="RoastingProfile" id="roastingprofile">
+                                <form id="roastingProfileForm" method="post" class="form-horizontal"  enctype="multipart/form-data">
+                                    <table id="profileTable" class="table table-bordered table-condensed table-responsive" style="border-collapse:collapse;">
+                                        <thead>
+                                            <tr>
+                                                <th class="col-xs-1">Segment</th>
+                                                <th class="col-xs-3" id="rampcol">Ramp</th>
+                                                <th class="col-xs-3" id="timecol">Time</th>
+                                                <th class="col-xs-3" id="tempcol">Temp</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr id="lock" class="locking">
+                                                <th></th>
+                                                <td class="text-center col-xs-3">
+                                                    <input type="radio" name="profilelock" id="ramplock">
+                                                </td>
+                                                <td class="text-center col-xs-3">
+                                                    <input type="radio" name="profilelock" id="timelock">
+                                                </td>
+                                                <td class="text-center col-xs-3">
+                                                    <input type="radio"  name="profilelock" id="templock">
+                                                </td>
+                                            </tr>
+                                            <tr id="ambient" data-toggle="collapse" data-target="#ambient_info" class="selectRow profileRow">
+                                                <th class="text-center col-xs-3 h6">Ambient Start</th>
+                                                <td class="text-center col-xs-3"></td>
+                                                <td class="text-center col-xs-3"></td>
+                                                <td class="text-center col-xs-3 h6">
+                                                        <div class="input-group">
+                                                            <input type="number" step="any" name="ambientfinaltemp" class="form-control profile" id="ambientFinaltemp" value={{ambient_finaltemp}}>
+                                                            <span class="input-group-addon">&degF</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr id="drying" data-toggle="collapse" data-target="#drying_info" class="lockable selectRow profileRow">
+                                                <th class="text-center col-xs-1 h6">Drying</th>
+                                                <td class="text-center col-xs-3 h6">
+                                                        <div class="input-group">
+                                                            <input type="number" step="0.5" name="dryingramp" class="form-control profile" id="dryingRamp" value={{drying_ramp}}>
+                                                            <span class="input-group-addon">/&degF</span>
+                                                        </div>
+                                                </td>
+                                                <td class="text-center col-xs-3 h6">
+                                                        <div class="input-group">
+                                                            <input type="number" step="0.25" name="dryingtime" class="form-control profile" id="dryingTime" value={{drying_time}}>
+                                                            <span class="input-group-addon">min</span>
+                                                        </div>
+                                                </td>
+                                                <td class="text-center col-xs-3 h6">
+                                                        <div class="input-group">
+                                                            <input type="number" step="1" name="dryingfinaltemp" class="form-control profile" id="dryingFinaltemp" value={{drying_finaltemp}}>
+                                                            <span class="input-group-addon">&degF</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr id="development" data-toggle="collapse" data-target="#development_info" class="lockable selectRow profileRow">
+                                                <th class="text-center col-xs-1 h6">Development</th>
+                                                <td class="text-center col-xs-3 h6">
+                                                        <div class="input-group">
+                                                            <input type="number" step="1" name="developmentramp" class="form-control profile" id="developmentRamp" value={{development_ramp}}>
+                                                            <span class="input-group-addon">/&degF</span>
+                                                        </div>
+                                                </td>
+                                                <td class="text-center col-xs-3 h6">
+                                                        <div class="input-group">
+                                                            <input type="number" step="0.25" name="developmenttime" class="form-control profile" id="developmentTime" value={{development_time}}>
+                                                            <span class="input-group-addon">min</span>
+                                                        </div>
+                                                </td>
+                                                <td class="text-center col-xs-3 h6">
+                                                        <div class="input-group">
+                                                            <input type="number" step="1" name="developmentfinaltemp" class="form-control profile" id="developmentFinaltemp" value={{development_finaltemp}}>
+                                                            <span class="input-group-addon">&degF</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr id="finish" data-toggle="collapse" data-target="#finish_info" class="lockable selectRow profileRow">
+                                                <th class="text-center col-xs-1 h6">Finishing</th>
+                                                <td class="text-center col-xs-3 h6">
+                                                        <div class="input-group">
+                                                            <input type="number" step="0.5" name="finishramp" class="form-control profile" id="finishRamp" value={{finish_ramp}}>
+                                                            <span class="input-group-addon">/&degF</span>
+                                                        </div>
+                                                </td>
+                                                <td class="text-center col-xs-3 h6">
+                                                        <div class="input-group">
+                                                            <input type="number" step="0.5" name="finishtime" class="form-control profile" id="finishTime" value={{finish_time}}>
+                                                            <span class="input-group-addon">min</span>
+                                                        </div>
+                                                </td>
+                                                <td class="text-center col-xs-3 h6">
+                                                        <div class="input-group">
+                                                            <input type="number" step="1" name="finishfinaltemp" class="form-control profile" id="finishFinaltemp" value={{finish_finaltemp}}>
+                                                            <span class="input-group-addon">&degF EOR</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr id="total" data-toggle="collapse" data-target="#total_info" class="profileRow">
+                                                <th class="text-center col-xs-3 h6">time/profile</th>
+                                                <td class="text-center col-xs-3"></td>
+                                                <td class="text-center col-xs-3 h6"> <div id="totaltime"> </div> </td>
+                                                <td class="text-center col-xs-3"><div id="profileOutput"></div></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <div class="col-xs-12 hidden-xs">
+                                        <button id = "saveprofile" class="btn btn-info">
+                                            Save Profile
+                                        </button>
+
                                         <button id="uploadprofile" class="btn btn-info" disabled>
                                             Upload
                                         </button>
                                         <div class="btn-group">
                                             <input id="loadprofile" type="file" class="btn btn-info"/>
                                         </div>
-                                </div>
+                                    </div>
+                                    <button onclick="init()">show curve</button>
                                 </form>
+                                <div class="col-xs-12 hidden-xs" id="profilecurve">
                                 </div>
-                        </fieldset>
-                    </div>
-                </div>
-            </div>
+                            </div> <!-- roastingprofile -->
+                        </div> <!-- roastingprofile_row -->
+                    </fieldset>
+                </div> <!-- profile_div -->
+            </div> <!-- row -->
 
-            <div class="row">
-                <div class="col-xs-4">
+        </div><!-- /.container -->
 
-                </div>
-
-            </div>
-            <!-- row -->
-
-            </div><!-- /.container -->
-
-            <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-            <script type="text/javascript" src="static/external/jquery-2.0.3/jquery-2.0.3.min.js"></script>
-            <!-- Include all compiled plugins (below), or include individual files as needed -->
-            <!-- <script type="text/javascript" src="static/external/Chart.bundle.js"></script>
-            <script type="text/javascript" src="static/plotter.js"></script> -->
-            <script type="text/javascript" src="static/external/bootstrap-3.0.3/js/bootstrap.min.js"></script>
-            <script type="text/javascript" src="static/external/gauge.min.js"></script>
-            <script type="text/javascript" src="static/external/flot-0.8.2/jquery.flot.js"></script>
-            <script type="text/javascript" src="static/external/flot-0.8.2/jquery.flot.selection.js"></script>
-            <script type="text/javascript" src="static/external/two.js"></script>
-            <script type="text/javascript" src="static/bigroaster.js"></script>
-        </body>
-    </html>
+        <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+        <script src="static/external/jquery-2.0.3/jquery-2.0.3.min.js"></script>
+        <!-- Include all compiled plugins (below), or include individual files as needed -->
+        <!-- <script src="static/external/Chart.bundle.js"></script>
+        <script src="static/plotter.js"></script> -->
+        <script src="static/external/bootstrap-3.0.3/js/bootstrap.min.js"></script>
+        <script src="static/external/gauge.min.js"></script>
+        <script src="static/external/flot-0.8.2/jquery.flot.js"></script>
+        <script src="static/external/flot-0.8.2/jquery.flot.selection.js"></script>
+        <script src="static/external/two.js"></script>
+        <script src="static/bezier.js"></script>
+        <script src="static/bigroaster.js"></script>
+    </body>
+</html>

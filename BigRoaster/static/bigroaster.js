@@ -74,6 +74,7 @@ function validateProfile(){
     var lockedCol = $('#profileTable').find('input[disabled=disabled]').closest('td').index() - 1;
     var myRow = $(this).closest('tr').index() - 1;
     var myCol = $(this).closest('td').index() - 1;
+    var profileBuilder = new Array(4);
 
     $('#profileTable tr').each(function(row, tr){
         // ramp, time, temp
@@ -138,6 +139,19 @@ function validateProfile(){
         }
     });
 
+    var totalTime = 0;
+    for(var i=1;i<tableValues.length; i++){
+        profileBuilder[i-1] = parseFloat(tableValues[i][1]);
+        if(profileBuilder[i-1] == profileBuilder[i-1]){
+            totalTime += profileBuilder[i-1];
+        }
+        else{
+            profileBuilder[i-1] = '';
+        }
+    }
+    profileBuilder[3] = "@" + tableValues[3][2] + "&degF";
+    $("#profileOutput").html(profileBuilder.slice(0,3).join("/")+profileBuilder[3]); 
+    $("#totaltime").html(totalTime);
     if(submitReady){
         $('#saveprofile').prop('disabled',false);
     }
@@ -475,9 +489,9 @@ jQuery(document).ready(function() {
     });
 
     // one-time on load, lock the time column
-    jQuery('#timelock').attr("checked",true);
+    jQuery('#ramplock').attr("checked",true);
     var currentTable = $('#profileTable');
-    var index = $('th[name=timecol]').index();
+    var index = $('th[id=rampcol]').index();
     currentTable.find('td').removeClass('col-highlight');
     currentTable.find('input[type=number]').removeAttr("disabled");
     currentTable.find('tr').each(function() {
@@ -500,14 +514,23 @@ jQuery(document).ready(function() {
     
 	jQuery('#stop').click(function() {
 		capture_on = 0;
+        $('#start').removeAttr("disabled");
+        $('#stop').attr("disabled","disabled");
 	});
-	jQuery('#restart').click(function() {
+	jQuery('#start').click(function() {
 		capture_on = 1;
+        $('#start').attr("disabled","disabled");
+        $('#stop').removeAttr("disabled");
 		tempDataArray = [[], [], []];
 		heatDataArray = [[], [], []];
 		timeElapsed = [0, 0, 0];
 		waitForMsg();
 	});
+
+    // And make sure they're set right on load
+    $('#start').removeAttr("disabled");
+    $('#stop').attr("disabled","disabled");
+
 	jQuery("#tempplot").bind("plotselected", function(event, ranges) {
 		var selected_start = ranges.xaxis.from;
 		var selected_end = ranges.xaxis.to;

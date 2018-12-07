@@ -152,7 +152,9 @@ def postsensors():
         print "Queue full. Scrapping data"
         tempQueue.get()
     tempQueue.put(content)
-    print "Posting to tempQueue: ", content, " and now queue length is ", tempQueue.qsize()
+
+    #print "Posting to tempQueue: ", content, " and now queue length is ", tempQueue.qsize()
+
     return 'JSON posted'
 
 #post params (selectable temp sensor number)    
@@ -180,7 +182,7 @@ def postparams(sensorNum=None):
 def getstatus(roasterNum=1):          
     global statusQ
     # blocking receive - current status
-    print "param.status: ", param.status
+    #print "param.status: ", param.status
     try:
         param.status = statusQ.get(timeout=param.status["sampleRate"]/1000.0)
     except:
@@ -356,6 +358,7 @@ def tempControlProc(tempQ, myRoaster, paramStatus, childParamConn):
         if readytemp == True:
             if mode == "auto":
                 tempMovingAverageList.append({"temp":temp,"timestamp":time.time()})
+                print "tempMovingAverageList: ", tempMovingAverageList
 
                 # smooth data
                 tempMovingAverage = 0.0 # moving avg init
@@ -375,10 +378,14 @@ def tempControlProc(tempQ, myRoaster, paramStatus, childParamConn):
                     i = 0
                     while i < len(tempMovingAverageList)-1:
                         diff = tempMovingAverageList[i+1]["temp"] - tempMovingAverageList[i]["temp"]
+                        timeDiff = tempMovingAverageList[i+1]["timestamp"] - tempMovingAverageList[i]["timestamp"]
                         slope = diff / (tempMovingAverageList[i+1]["timestamp"] - tempMovingAverageList[i]["timestamp"])
                         slopeMovingAverage =+ slope
                         i += 1
-                    slopeMovingAverage /= len(tempMovingAverageList)
+                    print "slopeMovingAverage before division: ", slopeMovingAverage
+                    slopeMovingAverage /= (len(tempMovingAverageList)-1)
+                    slopeMovingAverage *= 100
+                    print "slopeMovingAverage after division: ", slopeMovingAverage
 
         #        print "len(tempMovingAverageList) = %d" % len(tempMovingAverageList)
         #        print "Num Points smooth = %d" % num_pnts_smooth
@@ -388,6 +395,7 @@ def tempControlProc(tempQ, myRoaster, paramStatus, childParamConn):
                 # calculate PID every cycle
                 if (readyPIDcalc == True):
                     gasOutput = pid.calcPID_reg4(slopeMovingAverage, set_point, True)
+                    gasOutput = pid.calcPID_reg4(tempMovingAverage, set_point, True)
                     # send to heat process every cycle
                     if not oldMode == mode:
                         myRoaster.getGasServo().setToSafeLow()
