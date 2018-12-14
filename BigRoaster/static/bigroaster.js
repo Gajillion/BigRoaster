@@ -154,6 +154,7 @@ function validateProfile(){
     $("#totaltime").html(totalTime);
     if(submitReady){
         $('#saveprofile').prop('disabled',false);
+        init();
     }
     else{
         $('#saveprofile').prop('disabled',true);
@@ -530,6 +531,7 @@ jQuery(document).ready(function() {
     // And make sure they're set right on load
     $('#start').removeAttr("disabled");
     $('#stop').attr("disabled","disabled");
+    init();
 
 	jQuery("#tempplot").bind("plotselected", function(event, ranges) {
 		var selected_start = ranges.xaxis.from;
