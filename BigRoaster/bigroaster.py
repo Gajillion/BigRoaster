@@ -127,8 +127,39 @@ def postprofile():
     if request.json is not None:
         param.roast = request.json
 
+    # We have our profile. Now, calculate our roasting curve with time points
     for val in request.form:
         print val, " ", request.form[val]
+
+    # This is basically a reimplementation of bezier.js
+    #var time = 0;  // Start with an offset of 30
+    #var totalTime = parseFloat($('#totaltime').html());
+    #//var increments = (plotWidth - (time*2))/totalTime;
+    #var increments = plotWidth /totalTime;
+    #
+    #for(var i=0;i<locs.length;i++){
+    #    S[i] = createPath("blue");
+    #    time += (parseFloat(locs[i][0])*increments);
+    #    V[i] = createKnot(time+gridOffsetX, svgHeight-(parseFloat(locs[i][1])-30));
+    #}
+    #updateSplines();
+    
+    time = 0.0;
+    totalTime = 0.0;
+    for val in request.form:
+        if val
+# finishtime   6
+# developmentfinaltemp   200
+# developmenttime   5
+# ambientfinaltemp   50
+# profilelock   on
+# developmentramp   10
+# finishfinaltemp   267
+# finishramp   11.166666666666666
+# dryingtime   10
+# dryingfinaltemp   150
+# dryingramp   10
+
 
     print "ME SHARTS!"
     return 'OK'

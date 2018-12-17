@@ -591,8 +591,34 @@ jQuery(document).ready(function() {
 		return false;
 	});
 	jQuery('#saveprofile').on('click',function() {
-		formdata = jQuery(this).serialize();
-        formdata = formdata + '&' + jQuery(this).serializeDisabled();
+		form = $('#saveprofile').closest('form');
+        formdata = form.serialize();
+        formdata = formdata + '&' + form.serializeDisabled();
+/*        svg = document.getElementById('profilesvg');
+
+        profileCircles = [[,],[,],[,],[,]];
+        profilePaths = [[,,,],[,,,],[,,,]];
+
+        $circleArray = $('circle'); //get all circles
+        $circleArray.each(function(idx, el){//go through each circle
+            x_val = $(el).attr('cx');//get cx
+            y_val = $(el).attr('cy');//get cy
+            profileCircles[idx] = [x_val,y_val];
+        });
+
+        $svg = $('path[id=profilepath]');
+        $svg.each(function(idx, el){//go through each path
+            d  = $(el).attr('d');
+            if(d){
+                data =  d.split(' ');    //get data
+                profilePaths[idx] = [data[4],data[5],data[6],data[7]];
+            }
+        });
+        
+        // Need a better array than this
+        circleJSON = JSON.stringify(profileCircles);
+        pathsJSON = JSON.stringify(profilePaths);
+        formdata = formdata + '&' + circleJSON + '&' + pathsJSON; */
         jQuery.ajax({
             type : "POST",
             url : "/postprofile",

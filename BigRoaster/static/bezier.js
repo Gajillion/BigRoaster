@@ -36,6 +36,7 @@ function init() {
     svg =  document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttributeNS(null,"height",svgHeight);
     svg.setAttributeNS(null,"width",svgWidth);
+    svg.setAttributeNS(null,"id","profilesvg");
     drawGrid(svg);
     myDiv.appendChild(svg);
     updateCurve();
@@ -154,6 +155,7 @@ function createPath(color,width)
   width = (typeof width == 'undefined' ? "4" : width);
   var P=document.createElementNS("http://www.w3.org/2000/svg","path")
   P.setAttributeNS(null,"fill","none")
+  P.setAttributeNS(null,"id","profilepath")
   P.setAttributeNS(null,"stroke",color)
   P.setAttributeNS(null,"stroke-width",width)
   svg.appendChild(P)
